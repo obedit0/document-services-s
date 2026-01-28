@@ -1,0 +1,26 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Remove="Internals\Helpers\**" />
+    <EmbeddedResource Remove="Internals\Helpers\**" />
+    <None Remove="Internals\Helpers\**" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="FluentValidation" Version="12.1.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Domain\Domain.csproj" />
+    <ProjectReference Include="..\FakeApiInfrastructure\FakeApiInfrastructure.csproj" />
+    <ProjectReference Include="..\InternalHttpClientInfrastructure\InternalHttpClientInfrastructure.csproj" />
+    <ProjectReference Include="..\MongodbInfrastructure\MongodbInfrastructure.csproj" />
+  </ItemGroup>
+
+</Project>
