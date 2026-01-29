@@ -4,6 +4,7 @@ using FakeApiInfrastructure.Collections;
 using InternalHttpClientInfrastructure.Services;
 
 
+
 //using InternalHttpClientBuilder;
 using Microsoft.Extensions.Logging;
 
@@ -14,10 +15,10 @@ public class FakeApiQueryInfra : IExampleTitleQuery
     private readonly HttpClientBuilder _httpClient;
     private readonly ILogger<FakeApiQueryInfra> _logger;
 
-    public FakeApiQueryInfra(IHttpClientFactory factory, ILogger<FakeApiQueryInfra> logger)
+    public FakeApiQueryInfra(HttpClientBuilder httpClient, ILogger<FakeApiQueryInfra> logger)
     {
+        _httpClient = httpClient;
         _logger = logger;
-        _httpClient = new HttpClientBuilder(factory, logger);
     }
 
     async public Task<ExampleTitleEntity> GetAsync(int value = 1, CancellationToken ct = default)

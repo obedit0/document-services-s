@@ -10,7 +10,7 @@
     <Project Path="AwsDocumentdbInfrastructure/AwsDocumentdbInfrastructure.csproj" Id="105f8f46-5553-4731-92d1-174d52da2682" />
     <Project Path="AwsSqsInfrastructure/AwsSqsInfrastructure.csproj" Id="f2efc333-a840-4c44-a778-c00766f625df" />
     <Project Path="FakeApiInfrastructure/FakeApiInfrastructure.csproj" Id="b3fc4cd9-8949-480f-9c36-3daa56902b73" />
-    <Project Path="InternalHttpClientInfrastructure/InternalHttpClientInfrastructure.csproj" Id="bd9a1462-bfb7-4ebf-ab1d-299b48ef76ca" />
+    <Project Path="InternalHttpClientInfrastructure/KeynuaInfrastructure.csproj" Id="bd9a1462-bfb7-4ebf-ab1d-299b48ef76ca" />
     <Project Path="KafkaInfrastructure/KafkaInfrastructure.csproj" Id="5e2a9157-9289-4fda-8aa3-0a91215f46cf" />
     <Project Path="MongodbInfrastructure/MongodbInfrastructure.csproj" Id="4e0cb85c-4fef-468d-9e29-727e326b3bdb" />
     <Project Path="SqlServerInfrastructure/SqlServerInfrastructure.csproj" Id="315e34b8-40c8-4e2e-add3-5f3f5edd9078" />

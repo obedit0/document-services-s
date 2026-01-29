@@ -1,4 +1,9 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+﻿using Domain.Interfaces;
+using InternalHttpClientInfrastructure.Collections;
+using InternalHttpClientInfrastructure.Queries;
+using InternalHttpClientInfrastructure.Services;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using Polly;
 using Polly.Extensions.Http;
 using System.Net;
@@ -18,9 +23,9 @@ using System.Net.Http.Headers;
 
 namespace InternalHttpClientInfrastructure;
 
-public static class InternalHttpClientSetting
+public static class KeynuaSetting
 {
-    public static void AddInternalHttpClientConnector(this IServiceCollection services)
+    public static void AddKeynuaInfrastructure(this IServiceCollection services, IConfiguration configuration, bool isDevelopment)
     {
         services.AddHttpClient("ArifyClient", client =>
         {
@@ -48,5 +53,8 @@ public static class InternalHttpClientSetting
         .AddPolicyHandler(HttpPolicyExtensions
         .HandleTransientHttpError()
         .WaitAndRetryAsync(2, _ => TimeSpan.FromMilliseconds(200)));
+        services.Configure<KeynuaContext>(configuration.GetSection("Keynua"));
+        services.AddTransient<HttpClientBuilder>();
+        services.AddScoped<IKeynuaContractClient, KeynuaContractClient>();
     }
 }

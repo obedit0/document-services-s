@@ -36,11 +36,7 @@ public class SignatureContractsController : ControllerBase
     {
         try
         {
-            if (string.IsNullOrWhiteSpace(header.MessageIdentification))
-            {
-                header.MessageIdentification = Request.Headers["x-message-identifier"].FirstOrDefault();
-            }
-
+            
             var result = await _signaturePort.CreateAsync(header, body);
 
             if (!result.IsSuccess)

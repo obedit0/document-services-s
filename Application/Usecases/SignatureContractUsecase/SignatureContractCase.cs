@@ -11,7 +11,6 @@ namespace Application.Usecases.SignatureContractUsecase;
 
 public class SignatureContractCase : ISignatureContractPort
 {
-    private static readonly TimeSpan _utcOffset = TimeSpan.FromHours(-5);
     private readonly IOrdenFirmaRepository _repository;
     private readonly IKeynuaContractClient _keynuaClient;
 
@@ -33,32 +32,21 @@ public class SignatureContractCase : ISignatureContractPort
             return EasyResult<CreateSignatureContractResponse>.Success(MapToResponse(existing));
         }
 
-        var keynuaRequest = BuildKeynuaRequest(request);
-        var keynuaResult = await _keynuaClient.CreateContractAsync(keynuaRequest, ct);
-        if (!keynuaResult.IsSuccess)
-        {
-            var validation = new[]
-            {
-                new ValidationResultAdapter
-                {
-                    Code = "21098",
-                    Message = MessageCatalog.GetErrorByCode(21098),
-                    Field = "Keynua"
-                }
-            };
-            var status = keynuaResult.StatusCode <= 0 ? 502 : keynuaResult.StatusCode;
-            return EasyResult<CreateSignatureContractResponse>.Failure(status, validation);
-        }
+        //var channelConfig = awsit chanelQuery.getConfigurationById(idCanal: header.ChannelIdentity);
+        //ValidateAsync =
 
-        var now = DateTimeOffset.UtcNow.ToOffset(_utcOffset);
-        var entity = MapToDomain(request, now, keynuaResult.ProviderId);
+        var keynuaRequest = MapToDomain(request);
+        string idKeynua = await _keynuaClient.CreateContractAsync(keynuaRequest, ct);
 
-        await _repository.InsertAsync(entity, ct);
+        //var now = DateTimeOffset.UtcNow.ToOffset(_utcOffset);
 
-        return EasyResult<CreateSignatureContractResponse>.Success(MapToResponse(entity));
+
+        //await _repository.InsertAsync(entity, ct);
+        var hoola = new CreateSignatureContractResponse { IdFirma = idKeynua };
+        return EasyResult<CreateSignatureContractResponse>.Success(hoola);
     }
-
-    private static OrdenFirma MapToDomain(CreateSignatureContractRequest request, DateTimeOffset now, string? providerId)
+    
+    private static OrdenFirma MapToDomain(CreateSignatureContractRequest request)
     {
         var clientes = request.Clientes
             ?.Select(cliente => new Cliente
@@ -99,7 +87,6 @@ public class SignatureContractCase : ISignatureContractPort
             Id = Guid.NewGuid().ToString("N"),
             Referencia = new ReferenciaFirma(request.Referencia!),
             Proveedor = request.Proveedor!,
-            IdOrdenProveedor = providerId,
             Titulo = request.Titulo!,
             Descripcion = request.Descripcion,
             Canal = request.Canal,
@@ -110,13 +97,13 @@ public class SignatureContractCase : ISignatureContractPort
             Documentos = documentos,
             Observadores = observadores,
             Estado = EstadoFirma.PENDIENTE,
-            FechaCreacion = now,
-            FechaActualizacion = now,
+            FechaCreacion = DateTime.UtcNow,
+            FechaActualizacion = DateTime.UtcNow,
             Historico = new List<HistoricoEvento>
             {
                 new HistoricoEvento
                 {
-                    FechaEvento = now,
+                    FechaEvento = DateTime.UtcNow,
                     Fuente = "API",
                     EstadoNuevo = EstadoFirma.PENDIENTE
                 }
@@ -124,52 +111,6 @@ public class SignatureContractCase : ISignatureContractPort
         };
 
         return entity;
-    }
-
-    private static KeynuaContractRequest BuildKeynuaRequest(CreateSignatureContractRequest request)
-    {
-        var documents = request.Documentos?
-            .Select(documento => new KeynuaContractDocument
-            {
-                Name = documento.IdDocumento ?? "documento",
-                Base64 = documento.S3KeyOriginal ?? string.Empty
-            })
-            .ToList() ?? new List<KeynuaContractDocument>();
-
-        var users = new List<KeynuaContractUser>();
-
-        if (request.Clientes is not null)
-        {
-            users.AddRange(request.Clientes.Select(cliente => new KeynuaContractUser
-            {
-                Name = cliente.NombreCompleto ?? cliente.IdCliente ?? string.Empty,
-                Email = cliente.Email,
-                Phone = cliente.Telefono,
-                Groups = ["signers"]
-            }));
-        }
-
-        if (request.Observadores is not null)
-        {
-            users.AddRange(request.Observadores.Select(observador => new KeynuaContractUser
-            {
-                Name = observador.IdObservador ?? string.Empty,
-                Email = observador.Email,
-                Phone = null,
-                Groups = ["signers"]
-            }));
-        }
-
-        return new KeynuaContractRequest
-        {
-            Title = request.Titulo ?? string.Empty,
-            Description = request.Descripcion,
-            Reference = request.Referencia ?? string.Empty,
-            Documents = documents,
-            Users = users,
-            AddSignatureOnAllDocs = request.FirmaEnTodosDocumentos,
-            ChosenNotificationOptions = request.IdTiposNotificacion
-        };
     }
 
     private static CreateSignatureContractResponse MapToResponse(OrdenFirma entity)

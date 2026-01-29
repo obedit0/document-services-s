@@ -1,8 +1,8 @@
-using System.Text.Json;
-using System.Text.Json.Serialization;
 using Domain.Entities.SignatureContracts;
 using Domain.Interfaces;
 using InternalHttpClientInfrastructure.Collections;
+using InternalHttpClientInfrastructure.Services;
+using KeynuaInfrastructure.Collections.Response;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
@@ -10,186 +10,85 @@ namespace InternalHttpClientInfrastructure.Queries;
 
 public sealed class KeynuaContractClient : IKeynuaContractClient
 {
-    private readonly IHttpClientFactory _factory;
+    private readonly HttpClientBuilder _httpClientBuilder;
     private readonly ILogger<KeynuaContractClient> _logger;
-    private readonly KeynuaOptions _options;
+    private readonly KeynuaContext _options;
 
-    public KeynuaContractClient(IHttpClientFactory factory, ILogger<KeynuaContractClient> logger, IOptions<KeynuaOptions> options)
+    public KeynuaContractClient(HttpClientBuilder httpClientBuilder, ILogger<KeynuaContractClient> logger, IOptions<KeynuaContext> options)
     {
-        _factory = factory;
+        _httpClientBuilder = httpClientBuilder;
         _logger = logger;
         _options = options.Value;
     }
 
-    public async Task<KeynuaContractResult> CreateContractAsync(KeynuaContractRequest request, CancellationToken ct = default)
+    public async Task<string> CreateContractAsync(OrdenFirma orden, CancellationToken ct = default)
     {
-        var payload = BuildPayload(request);
+        var payload = BuildKeynuaRequest(orden);
 
-        var builder = new HttpClientBuilder(_factory, _logger)
-            .WithClient("ArifyClient")
+        var response = await _httpClientBuilder
             .WithBaseUrl(_options.BaseUrl)
             .WithEndpoint("contracts/v1")
             .WithHeader("x-api-key", _options.ApiKey)
-            .WithHeader("authorization", _options.Authorization);
+            .WithHeader("authorization", _options.Authorization)
+            .PutAsync<KeynuaContractPropertiesResponse>(payload, ct);
 
-        HttpResponseResult<JsonElement> response;
-
-        try
+        if (!response.IsSuccess || response.Content is null)
         {
-            response = await builder.PutAsync<JsonElement>(payload, ct);
+            throw new ArgumentException("Error con la peticion a Keynua");
         }
-        catch (Exception ex)
+        if (string.IsNullOrWhiteSpace(response.Content.Id))
         {
-            _logger.LogError("Keynua request failed: {Message}", ex.Message);
-            return new KeynuaContractResult(false, 502, null, null, ex.Message);
+            throw new ArgumentException("Error con la peticion a Keynua: respuesta sin Id");
         }
 
-        if (!response.IsSuccess || response.Content.ValueKind == JsonValueKind.Undefined)
-        {
-            var raw = response.Content.ValueKind == JsonValueKind.Undefined
-                ? null
-                : response.Content.GetRawText();
-            return new KeynuaContractResult(false, response.StatusCode, null, null, raw);
-        }
-
-        var providerId = TryGetString(response.Content, "id")
-            ?? TryGetString(response.Content, "contractId")
-            ?? TryGetString(response.Content, "contract_id")
-            ?? TryGetString(response.Content, "idContract");
-
-        var providerStatus = TryGetString(response.Content, "status")
-            ?? TryGetString(response.Content, "state")
-            ?? TryGetString(response.Content, "estado");
-
-        return new KeynuaContractResult(true, response.StatusCode, providerId, providerStatus, response.Content.GetRawText());
+        return response.Content.Id;
     }
-
-    private KeynuaCreateContractRequest BuildPayload(KeynuaContractRequest request)
+    private static KeynuaContractRequest BuildKeynuaRequest(OrdenFirma orden)
     {
-        var flags = new KeynuaFlags
-        {
-            PDFData = request.AddSignatureOnAllDocs.HasValue
-                ? new KeynuaPdfData { AddSignatureOnAllDocs = request.AddSignatureOnAllDocs.Value }
-                : null,
-            ChosenNotificationOptions = request.ChosenNotificationOptions
-        };
+        var documents = orden.Documentos?
+            .Select(documento => new KeynuaContractDocument
+            {
+                Name = documento.IdDocumento ?? "documento",
+                Base64 = documento.S3KeyOriginal ?? string.Empty
+            })
+            .ToList() ?? new List<KeynuaContractDocument>();
 
-        return new KeynuaCreateContractRequest
+        var users = new List<KeynuaContractUser>();
+
+        if (orden.Clientes is not null)
         {
-            Title = request.Title,
-            Description = request.Description,
-            Reference = request.Reference,
-            TemplateId = _options.TemplateId,
-            ExpirationInHours = _options.ExpirationInHours,
-            Documents = request.Documents.Select(d => new KeynuaDocument
+            users.AddRange(orden.Clientes.Select(cliente => new KeynuaContractUser
             {
-                Name = d.Name,
-                Base64 = d.Base64
-            }).ToList(),
-            Users = request.Users.Select(u => new KeynuaUser
+                Name = cliente.NombreCompleto ?? cliente.IdCliente ?? string.Empty,
+                Email = cliente.Email,
+                Phone = cliente.Telefono,
+                Groups = ["signers"]
+            }));
+        }
+
+        if (orden.Observadores is not null)
+        {
+            users.AddRange(orden.Observadores.Select(observador => new KeynuaContractUser
             {
-                Name = u.Name,
-                Email = u.Email,
-                Phone = u.Phone,
-                Groups = u.Groups
-            }).ToList(),
-            Flags = flags
+                Name = observador.IdObservador ?? string.Empty,
+                Email = observador.Email,
+                Phone = null,
+                Groups = ["signers"]
+            }));
+        }
+
+        return new KeynuaContractRequest
+        {
+            Title = orden.Titulo ?? string.Empty,
+            Description = orden.Descripcion,
+            Reference = orden.Referencia?.ToString() ?? string.Empty, // ajusta si ReferenciaFirma expone .Value
+            Documents = documents,
+            Users = users,
+            AddSignatureOnAllDocs = orden.FirmaEnTodosDocumentos,
+            ChosenNotificationOptions = orden.IdTiposNotificacion
         };
     }
 
-    private static string? TryGetString(JsonElement element, string propertyName)
-    {
-        if (element.ValueKind != JsonValueKind.Object)
-            return null;
-
-        if (!element.TryGetProperty(propertyName, out var value))
-            return null;
-
-        return value.ValueKind == JsonValueKind.String ? value.GetString() : value.GetRawText();
-    }
 }
 
-internal sealed class KeynuaCreateContractRequest
-{
-    [JsonPropertyName("title")]
-    public string? Title { get; set; }
 
-    [JsonPropertyName("description")]
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public string? Description { get; set; }
-
-    [JsonPropertyName("reference")]
-    public string? Reference { get; set; }
-
-    [JsonPropertyName("templateId")]
-    public string? TemplateId { get; set; }
-
-    [JsonPropertyName("expirationInHours")]
-    public int ExpirationInHours { get; set; }
-
-    [JsonPropertyName("documents")]
-    public List<KeynuaDocument> Documents { get; set; } = new();
-
-    [JsonPropertyName("users")]
-    public List<KeynuaUser> Users { get; set; } = new();
-
-    [JsonPropertyName("flags")]
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public KeynuaFlags? Flags { get; set; }
-}
-
-internal sealed class KeynuaDocument
-{
-    [JsonPropertyName("name")]
-    public string? Name { get; set; }
-
-    [JsonPropertyName("base64")]
-    public string? Base64 { get; set; }
-}
-
-internal sealed class KeynuaUser
-{
-    [JsonPropertyName("name")]
-    public string? Name { get; set; }
-
-    [JsonPropertyName("email")]
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public string? Email { get; set; }
-
-    [JsonPropertyName("phone")]
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public string? Phone { get; set; }
-
-    [JsonPropertyName("groups")]
-    public List<string> Groups { get; set; } = new();
-}
-
-internal sealed class KeynuaFlags
-{
-    [JsonPropertyName("remindersData")]
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public KeynuaRemindersData? RemindersData { get; set; }
-
-    [JsonPropertyName("PDFData")]
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public KeynuaPdfData? PDFData { get; set; }
-
-    [JsonPropertyName("chosenNotificationOptions")]
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public List<string>? ChosenNotificationOptions { get; set; }
-}
-
-internal sealed class KeynuaRemindersData
-{
-    [JsonPropertyName("frequency")]
-    public int Frequency { get; set; }
-
-    [JsonPropertyName("maxAttempts")]
-    public int MaxAttempts { get; set; }
-}
-
-internal sealed class KeynuaPdfData
-{
-    [JsonPropertyName("addSignatureOnAllDocs")]
-    public bool AddSignatureOnAllDocs { get; set; }
-}

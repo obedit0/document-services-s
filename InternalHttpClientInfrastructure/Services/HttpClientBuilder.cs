@@ -22,7 +22,7 @@ namespace InternalHttpClientInfrastructure.Services;
 public sealed class HttpClientBuilder
 {
     private readonly IHttpClientFactory _factory;
-    private readonly ILogger _logger;
+    private readonly ILogger<HttpClientBuilder> _logger;
     private readonly JsonSerializerOptions _jsonOptions;
 
     private string _clientName = "ArifyClient";
@@ -31,9 +31,9 @@ public sealed class HttpClientBuilder
     private readonly Dictionary<string, string> _headers = new();
     private readonly Dictionary<string, string> _query = new();
     private TimeSpan? _timeout;
-    private MicroserviceCallMemoryQueue _queue;
+    private MicroserviceCallMemoryQueue? _queue;
 
-    public HttpClientBuilder(IHttpClientFactory factory, ILogger logger)
+    public HttpClientBuilder(IHttpClientFactory factory, ILogger<HttpClientBuilder> logger)
     {
         _factory = factory ?? throw new ArgumentNullException(nameof(factory));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
@@ -46,6 +46,7 @@ public sealed class HttpClientBuilder
 
     public HttpClientBuilder WithMemoryQueue(MicroserviceCallMemoryQueue queue)
     {
+        ArgumentNullException.ThrowIfNull(queue);
         _queue = queue;
         return this;
     }

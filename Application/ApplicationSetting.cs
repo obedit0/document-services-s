@@ -34,9 +34,8 @@ public static class ApplicationSetting
         services.AddSingleton<MicroserviceErrorMemoryQueue>(provider => new MicroserviceErrorMemoryQueue());
 
         // Added Infrstrutures
-        services.AddInternalHttpClientConnector();
         services.AddFakeApiInfrastructure();
-        services.AddKeynuaInfrastructure(configuration);
+        services.AddKeynuaInfrastructure(configuration,isDevelopment);
         services.AddMongodbInfrastructure(configuration);
 
         //Dependency inyection        
