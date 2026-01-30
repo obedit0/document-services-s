@@ -88,13 +88,12 @@ public class SignatureContractCase : ISignatureContractPort
             .ToList();
 
         var canal = ParseChannel(request.Canal);
-        var keyword = request.Keyword;
-        var horaExpiracion = request.HoraExpiracion?.UtcDateTime ?? DateTime.UtcNow.AddHours(24);
+        var horaExpiracion = request.HoraExpiracion?.UtcDateTime ?? DateTime.UtcNow.AddHours(-5).AddHours(24);
 
         var ordenFirma = new OrdenFirma
         {
             Referencia = request.Referencia ?? string.Empty,
-            Keyword = keyword,
+            Keyword = request.Keyword,
             Titulo = request.Titulo ?? string.Empty,
             Descripcion = request.Descripcion ?? string.Empty,
             Canal = canal,
@@ -105,13 +104,13 @@ public class SignatureContractCase : ISignatureContractPort
             Clientes = firmantes,
             Documentos = documentos,
             Estado = EstadoFirma.PENDIENTE,
-            FechaCreacion = DateTime.UtcNow,
-            FechaActualizacion = DateTime.UtcNow,
+            FechaCreacion = DateTime.UtcNow.AddHours(-5),
+            FechaActualizacion = DateTime.UtcNow.AddHours(-5),
             Historico = new List<HistoricoEvento>
             {
                 new HistoricoEvento
                 {
-                    FechaEvento = DateTime.UtcNow,
+                    FechaEvento = DateTime.UtcNow.AddHours(-5),
                     Fuente = "API",
                     EstadoNuevo = EstadoFirma.PENDIENTE
                 }
