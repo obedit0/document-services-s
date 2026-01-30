@@ -19,9 +19,6 @@ public class OrdenFirmaDocument
     [BsonElement("keyword")]
     public string Keyword { get; set; } = string.Empty;
 
-    [BsonElement("proveedor")]
-    public string Proveedor { get; set; } = string.Empty;
-
     [BsonElement("id_orden_proveedor")]
     public string? IdOrdenProveedor { get; set; }
 
@@ -53,10 +50,10 @@ public class OrdenFirmaDocument
     public string Estado { get; set; } = string.Empty;
 
     [BsonElement("fecha_creacion")]
-    public DateTimeOffset FechaCreacion { get; set; }
+    public DateTime FechaCreacion { get; set; }
 
     [BsonElement("fecha_actualizacion")]
-    public DateTimeOffset FechaActualizacion { get; set; }
+    public DateTime FechaActualizacion { get; set; }
 
     [BsonElement("historico")]
     public List<HistoricoEventoDocument>? Historico { get; set; }
@@ -67,7 +64,7 @@ public class OrdenFirmaDocument
     public OrdenFirma ToDomain()
     {
         var canal = ParseChannel(Canal);
-        var horaExpiracion = HoraExpiracion ?? DateTime.UtcNow.AddHours(24);
+        var horaExpiracion = HoraExpiracion ?? DateTime.UtcNow.AddHours(-5).AddHours(24);
         var keyword = string.IsNullOrWhiteSpace(Keyword) ? Referencia : Keyword;
 
         return new OrdenFirma

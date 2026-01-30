@@ -18,8 +18,8 @@ public class OrdenFirma
     public required List<ClientEntity> Clientes { get; set; }
     public required List<Documento> Documentos { get; set; }
     public EstadoFirma Estado { get; set; }
-    public DateTimeOffset FechaCreacion { get; set; }
-    public DateTimeOffset FechaActualizacion { get; set; }
+    public DateTime FechaCreacion { get; set; }
+    public DateTime FechaActualizacion { get; set; }
     public List<HistoricoEvento>? Historico { get; set; }
     public required bool Pagare { get; set; } 
 }

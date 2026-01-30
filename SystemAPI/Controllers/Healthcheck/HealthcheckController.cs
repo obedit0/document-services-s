@@ -30,7 +30,7 @@ public class HealthcheckController : ControllerBase
         var healthData = new
         {
             status = "Healthy",
-            timestamp = DateTime.UtcNow,
+            timestamp = DateTime.UtcNow.AddHours(-5),
             uptime = Process.GetCurrentProcess().StartTime,
             version = GetType().Assembly.GetName().Version?.ToString() ?? "1.0.0",
             environment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Development"
@@ -48,7 +48,7 @@ public class HealthcheckController : ControllerBase
         var healthData = new
         {
             status = healthReport.Status.ToString(),
-            timestamp = DateTime.UtcNow,
+            timestamp = DateTime.UtcNow.AddHours(-5),
             uptime = Process.GetCurrentProcess().StartTime,
             version = GetType().Assembly.GetName().Version?.ToString() ?? "1.0.0",
             environment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Development",
@@ -67,7 +67,7 @@ public class HealthcheckController : ControllerBase
     [HttpGet("ping")]
     public IActionResult Ping()
     {
-        return Ok(new { message = "pong", timestamp = DateTime.UtcNow });
+        return Ok(new { message = "pong", timestamp = DateTime.UtcNow.AddHours(-5) });
     }
 
     //[Authorize] // Solo requiere autenticación, no scope específico
@@ -101,10 +101,10 @@ public class HealthcheckController : ControllerBase
 
         if (healthReport.Status == HealthStatus.Healthy)
         {
-            return Ok(new { status = "Ready", timestamp = DateTime.UtcNow });
+            return Ok(new { status = "Ready", timestamp = DateTime.UtcNow.AddHours(-5) });
         }
 
-        return StatusCode(503, new { status = "Not Ready", timestamp = DateTime.UtcNow });
+        return StatusCode(503, new { status = "Not Ready", timestamp = DateTime.UtcNow.AddHours(-5) });
     }
 
     [HttpGet("health/live")]
@@ -114,10 +114,10 @@ public class HealthcheckController : ControllerBase
 
         if (healthReport.Status == HealthStatus.Healthy)
         {
-            return Ok(new { status = "Alive", timestamp = DateTime.UtcNow });
+            return Ok(new { status = "Alive", timestamp = DateTime.UtcNow.AddHours(-5) });
         }
 
-        return StatusCode(503, new { status = "Not Alive", timestamp = DateTime.UtcNow });
+        return StatusCode(503, new { status = "Not Alive", timestamp = DateTime.UtcNow.AddHours(-5) });
     }
 
     [HttpGet("healthcheck")]
