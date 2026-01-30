@@ -1,4 +1,7 @@
+using Domain.Entities.Client;
 using Domain.Entities.SignatureContracts;
+using Domain.Enums;
+using MongoDB.Bson;
 using MongoDB.Bson.Serialization.Attributes;
 
 namespace MongodbInfrastructure.Collections;
@@ -7,10 +10,14 @@ namespace MongodbInfrastructure.Collections;
 public class OrdenFirmaDocument
 {
     [BsonId]
+    [BsonRepresentation(BsonType.ObjectId)]
     public string Id { get; set; } = string.Empty;
 
     [BsonElement("referencia")]
     public string Referencia { get; set; } = string.Empty;
+
+    [BsonElement("keyword")]
+    public string Keyword { get; set; } = string.Empty;
 
     [BsonElement("proveedor")]
     public string Proveedor { get; set; } = string.Empty;
@@ -28,7 +35,7 @@ public class OrdenFirmaDocument
     public string? Canal { get; set; }
 
     [BsonElement("hora_expiracion")]
-    public DateTimeOffset? HoraExpiracion { get; set; }
+    public DateTime? HoraExpiracion { get; set; }
 
     [BsonElement("firma_en_todos_documentos")]
     public bool? FirmaEnTodosDocumentos { get; set; }
@@ -42,12 +49,6 @@ public class OrdenFirmaDocument
     [BsonElement("documentos")]
     public List<DocumentoDocument> Documentos { get; set; } = new();
 
-    [BsonElement("observadores")]
-    public List<ObservadorDocument>? Observadores { get; set; }
-
-    [BsonElement("metadata")]
-    public Dictionary<string, object>? Metadata { get; set; }
-
     [BsonElement("estado")]
     public string Estado { get; set; } = string.Empty;
 
@@ -60,52 +61,57 @@ public class OrdenFirmaDocument
     [BsonElement("historico")]
     public List<HistoricoEventoDocument>? Historico { get; set; }
 
+    [BsonElement("pagare")]
+    public bool Pagare { get; set; }
+
     public OrdenFirma ToDomain()
     {
+        var canal = ParseChannel(Canal);
+        var horaExpiracion = HoraExpiracion ?? DateTime.UtcNow.AddHours(24);
+        var keyword = string.IsNullOrWhiteSpace(Keyword) ? Referencia : Keyword;
+
         return new OrdenFirma
         {
-            Id = Id,
-            Referencia = new ReferenciaFirma(Referencia),
-            Proveedor = Proveedor,
+            IdFirma = Id,
+            Referencia = Referencia,
+            Keyword = keyword,
             IdOrdenProveedor = IdOrdenProveedor,
             Titulo = Titulo,
-            Descripcion = Descripcion,
-            Canal = Canal,
-            HoraExpiracion = HoraExpiracion,
-            FirmaEnTodosDocumentos = FirmaEnTodosDocumentos,
-            IdTiposNotificacion = IdTiposNotificacion,
-            Clientes = Clientes.Select(c => new Cliente
+            Descripcion = Descripcion ?? string.Empty,
+            Canal = canal,
+            HoraExpiracion = horaExpiracion,
+            FirmaEnTodosDocumentos = FirmaEnTodosDocumentos ?? false,
+            IdTiposNotificacion = IdTiposNotificacion ?? new List<string>(),
+            Pagare = Pagare,
+            Clientes = Clientes.Select(c => new NaturalClientEntity
             {
-                IdCliente = c.IdCliente,
-                TipoVinculo = c.TipoVinculo,
-                NombreCompleto = c.NombreCompleto,
-                Email = c.Email,
-                Telefono = c.Telefono
-            }).ToList(),
+                Identity = int.TryParse(c.IdCliente, out var id) ? id : (int?)null,
+                FullName = c.NombreCompleto,
+                IdentityDocument = string.IsNullOrWhiteSpace(c.NumeroDocumento)
+                    ? null
+                    : new IdentityDocumentEntity { Number = c.NumeroDocumento },
+                Contact = string.IsNullOrWhiteSpace(c.Email) && string.IsNullOrWhiteSpace(c.Telefono)
+                    ? null
+                    : new ContactEntity { Email = c.Email, PhoneNumber = c.Telefono }
+            }).Cast<ClientEntity>().ToList(),
             Documentos = Documentos.Select(d => new Documento
             {
                 IdDocumento = d.IdDocumento,
                 TipoDocumento = d.TipoDocumento,
-                OwnerClienteId = d.OwnerClienteId,
+                NombreDocumento = string.IsNullOrWhiteSpace(d.NombreDocumento) ? d.IdDocumento : d.NombreDocumento,
+                OwnerClient = d.OwnerClienteId,
                 S3KeyOriginal = d.S3KeyOriginal,
                 HashSha256 = d.HashSha256,
                 S3KeyFirmado = d.S3KeyFirmado,
                 ProviderKeyFirmado = d.ProviderKeyFirmado,
                 FechaFirma = d.FechaFirma
             }).ToList(),
-            Observadores = Observadores?.Select(o => new Observador
-            {
-                IdObservador = o.IdObservador,
-                Email = o.Email,
-                Rol = o.Rol
-            }).ToList(),
-            Metadata = Metadata,
             Estado = Enum.TryParse<EstadoFirma>(Estado, true, out var estado) ? estado : EstadoFirma.PENDIENTE,
             FechaCreacion = FechaCreacion,
             FechaActualizacion = FechaActualizacion,
             Historico = Historico?.Select(h => new HistoricoEvento
             {
-                FechaEvento = h.FechaEvento,
+                FechaEvento = h.FechaEvento.UtcDateTime,
                 Fuente = h.Fuente,
                 EstadoAnterior = Enum.TryParse<EstadoFirma>(h.EstadoAnterior, true, out var estadoAnterior) ? estadoAnterior : null,
                 EstadoNuevo = Enum.TryParse<EstadoFirma>(h.EstadoNuevo, true, out var estadoNuevo) ? estadoNuevo : EstadoFirma.PENDIENTE,
@@ -120,42 +126,41 @@ public class OrdenFirmaDocument
     {
         return new OrdenFirmaDocument
         {
-            Id = entity.Id,
-            Referencia = entity.Referencia.Value,
-            Proveedor = entity.Proveedor,
+            Referencia = entity.Referencia,
+            Keyword = entity.Keyword,
             IdOrdenProveedor = entity.IdOrdenProveedor,
             Titulo = entity.Titulo,
             Descripcion = entity.Descripcion,
-            Canal = entity.Canal,
+            Canal = entity.Canal.ToString(),
             HoraExpiracion = entity.HoraExpiracion,
             FirmaEnTodosDocumentos = entity.FirmaEnTodosDocumentos,
             IdTiposNotificacion = entity.IdTiposNotificacion,
-            Clientes = entity.Clientes.Select(c => new ClienteDocument
+            Pagare = entity.Pagare,
+            Clientes = entity.Clientes.Select(c =>
             {
-                IdCliente = c.IdCliente,
-                TipoVinculo = c.TipoVinculo,
-                NombreCompleto = c.NombreCompleto,
-                Email = c.Email,
-                Telefono = c.Telefono
+                var nombreCompleto = c is NaturalClientEntity natural ? natural.FullName : null;
+                return new ClienteDocument
+                {
+                    IdCliente = c.Identity?.ToString() ?? string.Empty,
+                    TipoVinculo = string.Empty,
+                    NombreCompleto = nombreCompleto ?? string.Empty,
+                    NumeroDocumento = c.IdentityDocument?.Number ?? string.Empty,
+                    Email = c.Contact?.Email,
+                    Telefono = c.Contact?.PhoneNumber
+                };
             }).ToList(),
             Documentos = entity.Documentos.Select(d => new DocumentoDocument
             {
                 IdDocumento = d.IdDocumento,
                 TipoDocumento = d.TipoDocumento,
-                OwnerClienteId = d.OwnerClienteId,
+                NombreDocumento = d.NombreDocumento,
+                OwnerClienteId = d.OwnerClient,
                 S3KeyOriginal = d.S3KeyOriginal,
                 HashSha256 = d.HashSha256,
                 S3KeyFirmado = d.S3KeyFirmado,
                 ProviderKeyFirmado = d.ProviderKeyFirmado,
                 FechaFirma = d.FechaFirma
             }).ToList(),
-            Observadores = entity.Observadores?.Select(o => new ObservadorDocument
-            {
-                IdObservador = o.IdObservador,
-                Email = o.Email,
-                Rol = o.Rol
-            }).ToList(),
-            Metadata = entity.Metadata,
             Estado = entity.Estado.ToString(),
             FechaCreacion = entity.FechaCreacion,
             FechaActualizacion = entity.FechaActualizacion,
@@ -171,6 +176,19 @@ public class OrdenFirmaDocument
             }).ToList()
         };
     }
+
+    private static Channel ParseChannel(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+            return Channel.Ventanilla;
+
+        if (int.TryParse(value, out var numeric) && Enum.IsDefined(typeof(Channel), numeric))
+            return (Channel)numeric;
+
+        return Enum.TryParse<Channel>(value, true, out var channel)
+            ? channel
+            : Channel.Ventanilla;
+    }
 }
 
 public class ClienteDocument
@@ -183,6 +201,8 @@ public class ClienteDocument
 
     [BsonElement("nombre_completo")]
     public string NombreCompleto { get; set; } = string.Empty;
+    public string NumeroDocumento { get; set; } = string.Empty;
+
 
     [BsonElement("email")]
     public string? Email { get; set; }
@@ -198,6 +218,9 @@ public class DocumentoDocument
 
     [BsonElement("tipo_documento")]
     public string TipoDocumento { get; set; } = string.Empty;
+
+    [BsonElement("nombre_documento")]
+    public string NombreDocumento { get; set; } = string.Empty;
 
     [BsonElement("owner_cliente_id")]
     public string OwnerClienteId { get; set; } = string.Empty;
@@ -218,17 +241,6 @@ public class DocumentoDocument
     public DateTimeOffset? FechaFirma { get; set; }
 }
 
-public class ObservadorDocument
-{
-    [BsonElement("id_observador")]
-    public string IdObservador { get; set; } = string.Empty;
-
-    [BsonElement("email")]
-    public string Email { get; set; } = string.Empty;
-
-    [BsonElement("rol")]
-    public string? Rol { get; set; }
-}
 
 public class HistoricoEventoDocument
 {

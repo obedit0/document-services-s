@@ -1,10 +1,11 @@
 using Domain.Catalogs;
 using FluentValidation;
-
+using Microsoft.AspNetCore.Mvc;
 namespace Application.Adapters;
 
 public class SignatureHeaderRequest
 {
+    [FromHeader(Name = "MessageIdentification")]
     public string? MessageIdentification { get; set; }
 }
 

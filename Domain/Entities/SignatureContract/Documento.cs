@@ -4,7 +4,8 @@ public class Documento
 {
     public required string IdDocumento { get; set; }
     public required string TipoDocumento { get; set; }
-    public required string OwnerClienteId { get; set; }
+    public required string NombreDocumento { get; set; }
+    public required string OwnerClient { get; set; }
     public required string S3KeyOriginal { get; set; }
     public string? HashSha256 { get; set; }
     public string? S3KeyFirmado { get; set; }
