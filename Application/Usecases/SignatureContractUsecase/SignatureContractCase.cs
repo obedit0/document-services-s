@@ -38,12 +38,12 @@ public class SignatureContractCase : ISignatureContractPort
         //ValidateAsync =
 
         var ordenFirma = MapToDomain(request);
-        ordenFirma.IdFirma = await _keynuaClient.CreateContractAsync(ordenFirma, ct);
+        ordenFirma.IdOrdenProveedor = await _keynuaClient.CreateContractAsync(ordenFirma, ct);
 
         //var now = DateTimeOffset.UtcNow.ToOffset(_utcOffset);
 
 
-        //await _repository.InsertAsync(ordenFirma, ct);
+        ordenFirma.IdFirma = await _repository.InsertAsync(ordenFirma, ct);
         return EasyResult<CreateSignatureContractResponse>.Success(MapToResponse(ordenFirma));
     }
     

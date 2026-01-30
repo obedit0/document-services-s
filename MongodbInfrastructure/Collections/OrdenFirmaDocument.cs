@@ -83,17 +83,7 @@ public class OrdenFirmaDocument
             FirmaEnTodosDocumentos = FirmaEnTodosDocumentos ?? false,
             IdTiposNotificacion = IdTiposNotificacion ?? new List<string>(),
             Pagare = Pagare,
-            Clientes = Clientes.Select(c => new NaturalClientEntity
-            {
-                Identity = int.TryParse(c.IdCliente, out var id) ? id : (int?)null,
-                FullName = c.NombreCompleto,
-                IdentityDocument = string.IsNullOrWhiteSpace(c.NumeroDocumento)
-                    ? null
-                    : new IdentityDocumentEntity { Number = c.NumeroDocumento },
-                Contact = string.IsNullOrWhiteSpace(c.Email) && string.IsNullOrWhiteSpace(c.Telefono)
-                    ? null
-                    : new ContactEntity { Email = c.Email, PhoneNumber = c.Telefono }
-            }).Cast<ClientEntity>().ToList(),
+            Clientes = Clientes.Select(MapClienteToDomain).Cast<ClientEntity>().ToList(),
             Documentos = Documentos.Select(d => new Documento
             {
                 IdDocumento = d.IdDocumento,
@@ -136,19 +126,7 @@ public class OrdenFirmaDocument
             FirmaEnTodosDocumentos = entity.FirmaEnTodosDocumentos,
             IdTiposNotificacion = entity.IdTiposNotificacion,
             Pagare = entity.Pagare,
-            Clientes = entity.Clientes.Select(c =>
-            {
-                var nombreCompleto = c is NaturalClientEntity natural ? natural.FullName : null;
-                return new ClienteDocument
-                {
-                    IdCliente = c.Identity?.ToString() ?? string.Empty,
-                    TipoVinculo = string.Empty,
-                    NombreCompleto = nombreCompleto ?? string.Empty,
-                    NumeroDocumento = c.IdentityDocument?.Number ?? string.Empty,
-                    Email = c.Contact?.Email,
-                    Telefono = c.Contact?.PhoneNumber
-                };
-            }).ToList(),
+            Clientes = entity.Clientes.Select(MapClienteFromDomain).ToList(),
             Documentos = entity.Documentos.Select(d => new DocumentoDocument
             {
                 IdDocumento = d.IdDocumento,
@@ -177,6 +155,82 @@ public class OrdenFirmaDocument
         };
     }
 
+    private static ClienteDocument MapClienteFromDomain(ClientEntity cliente)
+    {
+        var natural = cliente as NaturalClientEntity;
+        return new ClienteDocument
+        {
+            IdCliente = cliente.Identity?.ToString() ?? string.Empty,
+            TipoVinculo = string.Empty,
+            NombreCompleto = natural?.FullName ?? string.Empty,
+            NumeroDocumento = cliente.IdentityDocument?.Number ?? string.Empty,
+            TipoDocumento = cliente.IdentityDocument?.Type?.ToString(),
+            Email = cliente.Contact?.Email,
+            Telefono = cliente.Contact?.PhoneNumber,
+            GivenName = natural?.GivenName,
+            PaternalLastName = natural?.PaternalLastName,
+            MaternalLastName = natural?.MaternalLastName,
+            Addresses = cliente.Addresses?.Select(a => new AddressDocument
+            {
+                Identity = a.Identity,
+                Name = a.Name,
+                Street = a.Street,
+                Number = a.Number,
+                Reference = a.Reference,
+                PostalCode = a.PostalCode
+            }).ToList()
+        };
+    }
+
+    private static ClientEntity MapClienteToDomain(ClienteDocument cliente)
+    {
+        var identity = int.TryParse(cliente.IdCliente, out var id) ? id : (int?)null;
+        var identityDocument = BuildIdentityDocument(cliente);
+        var contact = string.IsNullOrWhiteSpace(cliente.Email) && string.IsNullOrWhiteSpace(cliente.Telefono)
+            ? null
+            : new ContactEntity { Email = cliente.Email, PhoneNumber = cliente.Telefono };
+        var addresses = cliente.Addresses?.Select(a => new AddressEntity
+        {
+            Identity = a.Identity,
+            Name = a.Name,
+            Street = a.Street,
+            Number = a.Number,
+            Reference = a.Reference,
+            PostalCode = a.PostalCode
+        }).ToList();
+
+        return new NaturalClientEntity
+        {
+            Identity = identity,
+            FullName = cliente.NombreCompleto,
+            GivenName = cliente.GivenName,
+            PaternalLastName = cliente.PaternalLastName,
+            MaternalLastName = cliente.MaternalLastName,
+            IdentityDocument = identityDocument,
+            Contact = contact,
+            Addresses = addresses
+        };
+    }
+
+    private static IdentityDocumentEntity? BuildIdentityDocument(ClienteDocument cliente)
+    {
+        if (string.IsNullOrWhiteSpace(cliente.NumeroDocumento) && string.IsNullOrWhiteSpace(cliente.TipoDocumento))
+            return null;
+
+        var identityDocument = new IdentityDocumentEntity
+        {
+            Number = cliente.NumeroDocumento
+        };
+
+        if (!string.IsNullOrWhiteSpace(cliente.TipoDocumento) &&
+            Enum.TryParse<DocumentType>(cliente.TipoDocumento, true, out var type))
+        {
+            identityDocument.Type = type;
+        }
+
+        return identityDocument;
+    }
+
     private static Channel ParseChannel(string? value)
     {
         if (string.IsNullOrWhiteSpace(value))
@@ -201,7 +255,24 @@ public class ClienteDocument
 
     [BsonElement("nombre_completo")]
     public string NombreCompleto { get; set; } = string.Empty;
+
+    [BsonElement("numero_documento")]
     public string NumeroDocumento { get; set; } = string.Empty;
+
+    [BsonElement("tipo_documento")]
+    public string? TipoDocumento { get; set; }
+
+    [BsonElement("given_name")]
+    public string? GivenName { get; set; }
+
+    [BsonElement("paternal_last_name")]
+    public string? PaternalLastName { get; set; }
+
+    [BsonElement("maternal_last_name")]
+    public string? MaternalLastName { get; set; }
+
+    [BsonElement("addresses")]
+    public List<AddressDocument>? Addresses { get; set; }
 
 
     [BsonElement("email")]
@@ -209,6 +280,27 @@ public class ClienteDocument
 
     [BsonElement("telefono")]
     public string? Telefono { get; set; }
+}
+
+public class AddressDocument
+{
+    [BsonElement("identity")]
+    public int? Identity { get; set; }
+
+    [BsonElement("name")]
+    public string? Name { get; set; }
+
+    [BsonElement("street")]
+    public string? Street { get; set; }
+
+    [BsonElement("number")]
+    public string? Number { get; set; }
+
+    [BsonElement("reference")]
+    public string? Reference { get; set; }
+
+    [BsonElement("postal_code")]
+    public string? PostalCode { get; set; }
 }
 
 public class DocumentoDocument
