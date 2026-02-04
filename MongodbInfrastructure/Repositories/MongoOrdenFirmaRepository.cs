@@ -33,10 +33,11 @@ public class MongoOrdenFirmaRepository : IOrdenFirmaRepository
         return document?.ToDomain();
     }
 
-    public async Task InsertAsync(OrdenFirma entity, CancellationToken ct = default)
+    public async Task<string> InsertAsync(OrdenFirma entity, CancellationToken ct = default)
     {
         var document = OrdenFirmaDocument.FromDomain(entity);
         await _collection.InsertOneAsync(document, cancellationToken: ct);
+        return document.Id;
     }
 
     public Task UpdateStatusAsync(string id, EstadoFirma nuevoEstado, CancellationToken ct = default)
@@ -49,20 +50,12 @@ public class MongoOrdenFirmaRepository : IOrdenFirmaRepository
         var indexes = new List<CreateIndexModel<OrdenFirmaDocument>>
         {
             new(
-                Builders<OrdenFirmaDocument>.IndexKeys.Ascending(x => x.Referencia),
-                new CreateIndexOptions { Unique = true, Name = "ux_orden_firma_referencia" }
+                Builders<OrdenFirmaDocument>.IndexKeys.Ascending(x => x.Keyword),
+                new CreateIndexOptions { Name = "ix_orden_firma_keyword" }
             ),
             new(
-                Builders<OrdenFirmaDocument>.IndexKeys
-                    .Ascending(x => x.Proveedor)
-                    .Ascending(x => x.IdOrdenProveedor),
-                new CreateIndexOptions { Name = "ix_orden_firma_proveedor_orden" }
-            ),
-            new(
-                Builders<OrdenFirmaDocument>.IndexKeys
-                    .Ascending(x => x.Estado)
-                    .Ascending(x => x.FechaCreacion),
-                new CreateIndexOptions { Name = "ix_orden_firma_estado_fecha" }
+                Builders<OrdenFirmaDocument>.IndexKeys.Ascending(x => x.IdOrdenProveedor),
+                new CreateIndexOptions { Name = "ix_orden_firma_id_orden_proveedor" }
             )
         };
 

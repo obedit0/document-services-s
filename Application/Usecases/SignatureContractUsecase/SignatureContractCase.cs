@@ -2,7 +2,9 @@ using Application.Adapters;
 using Application.Internals.Executors;
 using Application.Internals.Adapters;
 using Application.Ports;
+using Domain.Entities.Client;
 using Domain.Entities.SignatureContracts;
+using Domain.Enums;
 using Domain.Interfaces;
 using Domain.Catalogs;
 using System.Text.Json;
@@ -26,103 +28,125 @@ public class SignatureContractCase : ISignatureContractPort
         if (validationResult != null)
             return validationResult;
 
-        var existing = await _repository.GetByReferenciaAsync(request.Referencia!, ct);
-        if (existing is not null)
-        {
-            return EasyResult<CreateSignatureContractResponse>.Success(MapToResponse(existing));
-        }
+        //var existing = await _repository.GetByReferenciaAsync(request.Referencia!, ct);
+        //if (existing is not null)
+        //{
+        //    return EasyResult<CreateSignatureContractResponse>.Success(MapToResponse(existing));
+        //}
 
         //var channelConfig = awsit chanelQuery.getConfigurationById(idCanal: header.ChannelIdentity);
         //ValidateAsync =
 
-        var keynuaRequest = MapToDomain(request);
-        string idKeynua = await _keynuaClient.CreateContractAsync(keynuaRequest, ct);
+        var ordenFirma = MapToDomain(request);
+        ordenFirma.IdOrdenProveedor = await _keynuaClient.CreateContractAsync(ordenFirma, ct);
 
         //var now = DateTimeOffset.UtcNow.ToOffset(_utcOffset);
 
 
-        //await _repository.InsertAsync(entity, ct);
-        var hoola = new CreateSignatureContractResponse { IdFirma = idKeynua };
-        return EasyResult<CreateSignatureContractResponse>.Success(hoola);
+        ordenFirma.IdFirma = await _repository.InsertAsync(ordenFirma, ct);
+        return EasyResult<CreateSignatureContractResponse>.Success(MapToResponse(ordenFirma));
     }
     
     private static OrdenFirma MapToDomain(CreateSignatureContractRequest request)
     {
-        var clientes = request.Clientes
-            ?.Select(cliente => new Cliente
+        var firmantes = request.Clientes
+            ?.Select(cliente =>
             {
-                IdCliente = cliente.IdCliente!,
-                TipoVinculo = cliente.TipoVinculo!,
-                NombreCompleto = cliente.NombreCompleto!,
-                Email = cliente.Email,
-                Telefono = cliente.Telefono
+                var identity = int.TryParse(cliente.IdCliente, out var id) ? id : (int?)null;
+                var contact = string.IsNullOrWhiteSpace(cliente.Email) && string.IsNullOrWhiteSpace(cliente.Telefono)
+                    ? null
+                    : new ContactEntity
+                    {
+                        Email = cliente.Email,
+                        PhoneNumber = cliente.Telefono
+                    };
+
+                var identityDocument = string.IsNullOrWhiteSpace(cliente.NumeroDocumento)
+                    ? null
+                    : new IdentityDocumentEntity
+                    {
+                        Number = cliente.NumeroDocumento
+                    };
+
+                return new NaturalClientEntity
+                {
+                    Identity = identity,
+                    FullName = cliente.NombreCompleto,
+                    Contact = contact,
+                    IdentityDocument = identityDocument
+                };
             })
-            .ToList() ?? new List<Cliente>();
+            .Cast<ClientEntity>()
+            .ToList() ?? new List<ClientEntity>();
 
         var documentos = request.Documentos
             ?.Select(documento => new Documento
             {
-                IdDocumento = documento.IdDocumento!,
-                TipoDocumento = documento.TipoDocumento!,
-                OwnerClienteId = documento.OwnerClienteId!,
-                S3KeyOriginal = documento.S3KeyOriginal!,
-                HashSha256 = documento.HashSha256,
-                S3KeyFirmado = null,
-                ProviderKeyFirmado = null,
-                FechaFirma = null
+                IdDocumento = documento.IdDocumento ?? string.Empty,
+                TipoDocumento = documento.TipoDocumento ?? string.Empty,
+                NombreDocumento = documento.IdDocumento ?? string.Empty,
+                OwnerClient = documento.OwnerClienteId ?? string.Empty,
+                S3KeyOriginal = documento.S3KeyOriginal ?? string.Empty
             })
             .ToList() ?? new List<Documento>();
 
-        var observadores = request.Observadores
-            ?.Select(observador => new Observador
-            {
-                IdObservador = observador.IdObservador!,
-                Email = observador.Email!,
-                Rol = observador.Rol
-            })
-            .ToList();
+        var canal = ParseChannel(request.Canal);
+        var horaExpiracion = request.HoraExpiracion?.UtcDateTime ?? DateTime.UtcNow.AddHours(-5).AddHours(24);
 
-        var entity = new OrdenFirma
+        var ordenFirma = new OrdenFirma
         {
-            Id = Guid.NewGuid().ToString("N"),
-            Referencia = new ReferenciaFirma(request.Referencia!),
-            Proveedor = request.Proveedor!,
-            Titulo = request.Titulo!,
-            Descripcion = request.Descripcion,
-            Canal = request.Canal,
-            HoraExpiracion = request.HoraExpiracion,
-            FirmaEnTodosDocumentos = request.FirmaEnTodosDocumentos,
+            IdFirma = Guid.NewGuid().ToString("N"),
+            Referencia = request.Referencia ?? string.Empty,
+            Keyword = request.Keyword,
+            Titulo = request.Titulo ?? string.Empty,
+            Descripcion = request.Descripcion ?? string.Empty,
+            Canal = canal,
+            HoraExpiracion = horaExpiracion,
+            FirmaEnTodosDocumentos = request.FirmaEnTodoDocumentos,
             IdTiposNotificacion = request.IdTiposNotificacion,
-            Clientes = clientes,
+            Pagare = request.Pagare,
+            Clientes = firmantes,
             Documentos = documentos,
-            Observadores = observadores,
             Estado = EstadoFirma.PENDIENTE,
-            FechaCreacion = DateTime.UtcNow,
-            FechaActualizacion = DateTime.UtcNow,
+            FechaCreacion = DateTime.UtcNow.AddHours(-5),
+            FechaActualizacion = DateTime.UtcNow.AddHours(-5),
             Historico = new List<HistoricoEvento>
             {
                 new HistoricoEvento
                 {
-                    FechaEvento = DateTime.UtcNow,
+                    FechaEvento = DateTime.UtcNow.AddHours(-5),
                     Fuente = "API",
                     EstadoNuevo = EstadoFirma.PENDIENTE
                 }
             }
         };
 
-        return entity;
+        return ordenFirma;
     }
 
     private static CreateSignatureContractResponse MapToResponse(OrdenFirma entity)
     {
         return new CreateSignatureContractResponse
         {
-            IdFirma = entity.Id,
-            Referencia = entity.Referencia.Value,
+            IdFirma = entity.IdFirma,
+            Referencia = entity.Referencia,
             Estado = entity.Estado.ToString(),
             FechaCreacion = entity.FechaCreacion,
             FechaActualizacion = entity.FechaActualizacion
         };
+    }
+
+    private static Channel ParseChannel(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+            return Channel.Ventanilla;
+
+        if (int.TryParse(value, out var numeric) && Enum.IsDefined(typeof(Channel), numeric))
+            return (Channel)numeric;
+
+        return Enum.TryParse<Channel>(value, true, out var channel)
+            ? channel
+            : Channel.Ventanilla;
     }
     private async Task<EasyResult<CreateSignatureContractResponse>?> ValidateAsync(
     SignatureHeaderRequest header,

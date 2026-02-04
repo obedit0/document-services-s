@@ -1,4 +1,7 @@
+using Domain.Entities.Client;
 using Domain.Entities.SignatureContracts;
+using Domain.Enums;
+using MongoDB.Bson;
 using MongoDB.Bson.Serialization.Attributes;
 
 namespace MongodbInfrastructure.Collections;
@@ -7,13 +10,14 @@ namespace MongodbInfrastructure.Collections;
 public class OrdenFirmaDocument
 {
     [BsonId]
+    [BsonRepresentation(BsonType.ObjectId)]
     public string Id { get; set; } = string.Empty;
 
     [BsonElement("referencia")]
     public string Referencia { get; set; } = string.Empty;
 
-    [BsonElement("proveedor")]
-    public string Proveedor { get; set; } = string.Empty;
+    [BsonElement("keyword")]
+    public string Keyword { get; set; } = string.Empty;
 
     [BsonElement("id_orden_proveedor")]
     public string? IdOrdenProveedor { get; set; }
@@ -28,7 +32,7 @@ public class OrdenFirmaDocument
     public string? Canal { get; set; }
 
     [BsonElement("hora_expiracion")]
-    public DateTimeOffset? HoraExpiracion { get; set; }
+    public DateTime? HoraExpiracion { get; set; }
 
     [BsonElement("firma_en_todos_documentos")]
     public bool? FirmaEnTodosDocumentos { get; set; }
@@ -42,70 +46,59 @@ public class OrdenFirmaDocument
     [BsonElement("documentos")]
     public List<DocumentoDocument> Documentos { get; set; } = new();
 
-    [BsonElement("observadores")]
-    public List<ObservadorDocument>? Observadores { get; set; }
-
-    [BsonElement("metadata")]
-    public Dictionary<string, object>? Metadata { get; set; }
-
     [BsonElement("estado")]
     public string Estado { get; set; } = string.Empty;
 
     [BsonElement("fecha_creacion")]
-    public DateTimeOffset FechaCreacion { get; set; }
+    public DateTime FechaCreacion { get; set; }
 
     [BsonElement("fecha_actualizacion")]
-    public DateTimeOffset FechaActualizacion { get; set; }
+    public DateTime FechaActualizacion { get; set; }
 
     [BsonElement("historico")]
     public List<HistoricoEventoDocument>? Historico { get; set; }
 
+    [BsonElement("pagare")]
+    public bool Pagare { get; set; }
+
     public OrdenFirma ToDomain()
     {
+        var canal = ParseChannel(Canal);
+        var horaExpiracion = HoraExpiracion ?? DateTime.UtcNow.AddHours(-5).AddHours(24);
+        var keyword = string.IsNullOrWhiteSpace(Keyword) ? Referencia : Keyword;
+
         return new OrdenFirma
         {
-            Id = Id,
-            Referencia = new ReferenciaFirma(Referencia),
-            Proveedor = Proveedor,
+            IdFirma = Id,
+            Referencia = Referencia,
+            Keyword = keyword,
             IdOrdenProveedor = IdOrdenProveedor,
             Titulo = Titulo,
-            Descripcion = Descripcion,
-            Canal = Canal,
-            HoraExpiracion = HoraExpiracion,
-            FirmaEnTodosDocumentos = FirmaEnTodosDocumentos,
-            IdTiposNotificacion = IdTiposNotificacion,
-            Clientes = Clientes.Select(c => new Cliente
-            {
-                IdCliente = c.IdCliente,
-                TipoVinculo = c.TipoVinculo,
-                NombreCompleto = c.NombreCompleto,
-                Email = c.Email,
-                Telefono = c.Telefono
-            }).ToList(),
+            Descripcion = Descripcion ?? string.Empty,
+            Canal = canal,
+            HoraExpiracion = horaExpiracion,
+            FirmaEnTodosDocumentos = FirmaEnTodosDocumentos ?? false,
+            IdTiposNotificacion = IdTiposNotificacion ?? new List<string>(),
+            Pagare = Pagare,
+            Clientes = Clientes.Select(MapClienteToDomain).Cast<ClientEntity>().ToList(),
             Documentos = Documentos.Select(d => new Documento
             {
                 IdDocumento = d.IdDocumento,
                 TipoDocumento = d.TipoDocumento,
-                OwnerClienteId = d.OwnerClienteId,
+                NombreDocumento = string.IsNullOrWhiteSpace(d.NombreDocumento) ? d.IdDocumento : d.NombreDocumento,
+                OwnerClient = d.OwnerClienteId,
                 S3KeyOriginal = d.S3KeyOriginal,
                 HashSha256 = d.HashSha256,
                 S3KeyFirmado = d.S3KeyFirmado,
                 ProviderKeyFirmado = d.ProviderKeyFirmado,
                 FechaFirma = d.FechaFirma
             }).ToList(),
-            Observadores = Observadores?.Select(o => new Observador
-            {
-                IdObservador = o.IdObservador,
-                Email = o.Email,
-                Rol = o.Rol
-            }).ToList(),
-            Metadata = Metadata,
             Estado = Enum.TryParse<EstadoFirma>(Estado, true, out var estado) ? estado : EstadoFirma.PENDIENTE,
             FechaCreacion = FechaCreacion,
             FechaActualizacion = FechaActualizacion,
             Historico = Historico?.Select(h => new HistoricoEvento
             {
-                FechaEvento = h.FechaEvento,
+                FechaEvento = h.FechaEvento.UtcDateTime,
                 Fuente = h.Fuente,
                 EstadoAnterior = Enum.TryParse<EstadoFirma>(h.EstadoAnterior, true, out var estadoAnterior) ? estadoAnterior : null,
                 EstadoNuevo = Enum.TryParse<EstadoFirma>(h.EstadoNuevo, true, out var estadoNuevo) ? estadoNuevo : EstadoFirma.PENDIENTE,
@@ -120,42 +113,29 @@ public class OrdenFirmaDocument
     {
         return new OrdenFirmaDocument
         {
-            Id = entity.Id,
-            Referencia = entity.Referencia.Value,
-            Proveedor = entity.Proveedor,
+            Referencia = entity.Referencia,
+            Keyword = entity.Keyword,
             IdOrdenProveedor = entity.IdOrdenProveedor,
             Titulo = entity.Titulo,
             Descripcion = entity.Descripcion,
-            Canal = entity.Canal,
+            Canal = entity.Canal.ToString(),
             HoraExpiracion = entity.HoraExpiracion,
             FirmaEnTodosDocumentos = entity.FirmaEnTodosDocumentos,
             IdTiposNotificacion = entity.IdTiposNotificacion,
-            Clientes = entity.Clientes.Select(c => new ClienteDocument
-            {
-                IdCliente = c.IdCliente,
-                TipoVinculo = c.TipoVinculo,
-                NombreCompleto = c.NombreCompleto,
-                Email = c.Email,
-                Telefono = c.Telefono
-            }).ToList(),
+            Pagare = entity.Pagare,
+            Clientes = entity.Clientes.Select(MapClienteFromDomain).ToList(),
             Documentos = entity.Documentos.Select(d => new DocumentoDocument
             {
                 IdDocumento = d.IdDocumento,
                 TipoDocumento = d.TipoDocumento,
-                OwnerClienteId = d.OwnerClienteId,
+                NombreDocumento = d.NombreDocumento,
+                OwnerClienteId = d.OwnerClient,
                 S3KeyOriginal = d.S3KeyOriginal,
                 HashSha256 = d.HashSha256,
                 S3KeyFirmado = d.S3KeyFirmado,
                 ProviderKeyFirmado = d.ProviderKeyFirmado,
                 FechaFirma = d.FechaFirma
             }).ToList(),
-            Observadores = entity.Observadores?.Select(o => new ObservadorDocument
-            {
-                IdObservador = o.IdObservador,
-                Email = o.Email,
-                Rol = o.Rol
-            }).ToList(),
-            Metadata = entity.Metadata,
             Estado = entity.Estado.ToString(),
             FechaCreacion = entity.FechaCreacion,
             FechaActualizacion = entity.FechaActualizacion,
@@ -171,6 +151,95 @@ public class OrdenFirmaDocument
             }).ToList()
         };
     }
+
+    private static ClienteDocument MapClienteFromDomain(ClientEntity cliente)
+    {
+        var natural = cliente as NaturalClientEntity;
+        return new ClienteDocument
+        {
+            IdCliente = cliente.Identity?.ToString() ?? string.Empty,
+            TipoVinculo = string.Empty,
+            NombreCompleto = natural?.FullName ?? string.Empty,
+            NumeroDocumento = cliente.IdentityDocument?.Number ?? string.Empty,
+            TipoDocumento = cliente.IdentityDocument?.Type?.ToString(),
+            Email = cliente.Contact?.Email,
+            Telefono = cliente.Contact?.PhoneNumber,
+            GivenName = natural?.GivenName,
+            PaternalLastName = natural?.PaternalLastName,
+            MaternalLastName = natural?.MaternalLastName,
+            Addresses = cliente.Addresses?.Select(a => new AddressDocument
+            {
+                Identity = a.Identity,
+                Name = a.Name,
+                Street = a.Street,
+                Number = a.Number,
+                Reference = a.Reference,
+                PostalCode = a.PostalCode
+            }).ToList()
+        };
+    }
+
+    private static ClientEntity MapClienteToDomain(ClienteDocument cliente)
+    {
+        var identity = int.TryParse(cliente.IdCliente, out var id) ? id : (int?)null;
+        var identityDocument = BuildIdentityDocument(cliente);
+        var contact = string.IsNullOrWhiteSpace(cliente.Email) && string.IsNullOrWhiteSpace(cliente.Telefono)
+            ? null
+            : new ContactEntity { Email = cliente.Email, PhoneNumber = cliente.Telefono };
+        var addresses = cliente.Addresses?.Select(a => new AddressEntity
+        {
+            Identity = a.Identity,
+            Name = a.Name,
+            Street = a.Street,
+            Number = a.Number,
+            Reference = a.Reference,
+            PostalCode = a.PostalCode
+        }).ToList();
+
+        return new NaturalClientEntity
+        {
+            Identity = identity,
+            FullName = cliente.NombreCompleto,
+            GivenName = cliente.GivenName,
+            PaternalLastName = cliente.PaternalLastName,
+            MaternalLastName = cliente.MaternalLastName,
+            IdentityDocument = identityDocument,
+            Contact = contact,
+            Addresses = addresses
+        };
+    }
+
+    private static IdentityDocumentEntity? BuildIdentityDocument(ClienteDocument cliente)
+    {
+        if (string.IsNullOrWhiteSpace(cliente.NumeroDocumento) && string.IsNullOrWhiteSpace(cliente.TipoDocumento))
+            return null;
+
+        var identityDocument = new IdentityDocumentEntity
+        {
+            Number = cliente.NumeroDocumento
+        };
+
+        if (!string.IsNullOrWhiteSpace(cliente.TipoDocumento) &&
+            Enum.TryParse<DocumentType>(cliente.TipoDocumento, true, out var type))
+        {
+            identityDocument.Type = type;
+        }
+
+        return identityDocument;
+    }
+
+    private static Channel ParseChannel(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+            return Channel.Ventanilla;
+
+        if (int.TryParse(value, out var numeric) && Enum.IsDefined(typeof(Channel), numeric))
+            return (Channel)numeric;
+
+        return Enum.TryParse<Channel>(value, true, out var channel)
+            ? channel
+            : Channel.Ventanilla;
+    }
 }
 
 public class ClienteDocument
@@ -184,11 +253,51 @@ public class ClienteDocument
     [BsonElement("nombre_completo")]
     public string NombreCompleto { get; set; } = string.Empty;
 
+    [BsonElement("numero_documento")]
+    public string NumeroDocumento { get; set; } = string.Empty;
+
+    [BsonElement("tipo_documento")]
+    public string? TipoDocumento { get; set; }
+
+    [BsonElement("given_name")]
+    public string? GivenName { get; set; }
+
+    [BsonElement("paternal_last_name")]
+    public string? PaternalLastName { get; set; }
+
+    [BsonElement("maternal_last_name")]
+    public string? MaternalLastName { get; set; }
+
+    [BsonElement("addresses")]
+    public List<AddressDocument>? Addresses { get; set; }
+
+
     [BsonElement("email")]
     public string? Email { get; set; }
 
     [BsonElement("telefono")]
     public string? Telefono { get; set; }
+}
+
+public class AddressDocument
+{
+    [BsonElement("identity")]
+    public int? Identity { get; set; }
+
+    [BsonElement("name")]
+    public string? Name { get; set; }
+
+    [BsonElement("street")]
+    public string? Street { get; set; }
+
+    [BsonElement("number")]
+    public string? Number { get; set; }
+
+    [BsonElement("reference")]
+    public string? Reference { get; set; }
+
+    [BsonElement("postal_code")]
+    public string? PostalCode { get; set; }
 }
 
 public class DocumentoDocument
@@ -198,6 +307,9 @@ public class DocumentoDocument
 
     [BsonElement("tipo_documento")]
     public string TipoDocumento { get; set; } = string.Empty;
+
+    [BsonElement("nombre_documento")]
+    public string NombreDocumento { get; set; } = string.Empty;
 
     [BsonElement("owner_cliente_id")]
     public string OwnerClienteId { get; set; } = string.Empty;
@@ -218,17 +330,6 @@ public class DocumentoDocument
     public DateTimeOffset? FechaFirma { get; set; }
 }
 
-public class ObservadorDocument
-{
-    [BsonElement("id_observador")]
-    public string IdObservador { get; set; } = string.Empty;
-
-    [BsonElement("email")]
-    public string Email { get; set; } = string.Empty;
-
-    [BsonElement("rol")]
-    public string? Rol { get; set; }
-}
 
 public class HistoricoEventoDocument
 {

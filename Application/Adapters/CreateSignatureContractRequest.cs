@@ -7,17 +7,17 @@ namespace Application.Adapters;
 public class CreateSignatureContractRequest
 {
     public string? Referencia { get; set; }
-    public string? Proveedor { get; set; }
+    public string? Keyword { get; set; }
     public string? Titulo { get; set; }
     public string? Descripcion { get; set; }
     public string? Canal { get; set; }
     public DateTimeOffset? HoraExpiracion { get; set; }
-    public bool? FirmaEnTodosDocumentos { get; set; }
-    public List<string>? IdTiposNotificacion { get; set; }
-    public List<ClienteRequest>? Clientes { get; set; }
+    public required List<string> IdTiposNotificacion { get; set; }
+    public bool FirmaEnTodoDocumentos { get; set; }
+    public bool Pagare { get; set; }
     public List<DocumentoRequest>? Documentos { get; set; }
+    public List<ClienteRequest>? Clientes { get; set; }
     public List<ObservadorRequest>? Observadores { get; set; }
-    public Dictionary<string, object>? Metadata { get; set; }
 }
 
 public class ClienteRequest
@@ -25,6 +25,7 @@ public class ClienteRequest
     public string? IdCliente { get; set; }
     public string? TipoVinculo { get; set; }
     public string? NombreCompleto { get; set; }
+    public string? NumeroDocumento { get; set; }
     public string? Email { get; set; }
     public string? Telefono { get; set; }
 }
@@ -35,10 +36,8 @@ public class DocumentoRequest
     public string? TipoDocumento { get; set; }
     public string? OwnerClienteId { get; set; }
     public string? S3KeyOriginal { get; set; }
-    public string? HashSha256 { get; set; }
     public string? S3KeyFirmado { get; set; }
     public string? ProviderKeyFirmado { get; set; }
-    public DateTimeOffset? FechaFirma { get; set; }
 }
 
 public class ObservadorRequest
@@ -54,10 +53,7 @@ public class CreateSignatureContractRequestValidator : AbstractValidator<CreateS
     {
         RuleFor(x => x.Referencia)
             .NotEmpty().WithMessage(MessageCatalog.GetErrorByCode(21002)).WithErrorCode("21002");
-
-        RuleFor(x => x.Proveedor)
-            .NotEmpty().WithMessage(MessageCatalog.GetErrorByCode(21002)).WithErrorCode("21002");
-
+        
         RuleFor(x => x.Titulo)
             .NotEmpty().WithMessage(MessageCatalog.GetErrorByCode(21002)).WithErrorCode("21002");
 
@@ -95,7 +91,7 @@ public class CreateSignatureContractRequestValidator : AbstractValidator<CreateS
                 continue;
 
             var ownerId = documento.OwnerClienteId ?? string.Empty;
-            if (ownerId.Length == 0 || !clienteIds.Contains(ownerId))
+            if (ownerId.Length == 0 || clienteIds.Contains(ownerId))
             {
                 context.AddFailure(new ValidationFailure(nameof(CreateSignatureContractRequest.Documentos), MessageCatalog.GetErrorByCode(21007))
                 {
