@@ -15,6 +15,17 @@ public class MongoOrdenFirmaRepository : IOrdenFirmaRepository
         EnsureIndexes();
     }
 
+    public async Task<OrdenFirma?> GetByLegacyReferencesAsync(int idCanal, int idCanalTransaccion, CancellationToken ct = default)
+    {
+        var filter = Builders<OrdenFirmaDocument>.Filter.And(
+            Builders<OrdenFirmaDocument>.Filter.Eq("canal", idCanal),
+            Builders<OrdenFirmaDocument>.Filter.Eq("keyword", idCanalTransaccion)
+        );
+
+        var document = await _collection.Find(filter).FirstOrDefaultAsync(ct);
+        return document?.ToDomain();
+    }
+
     public async Task<OrdenFirma?> GetByReferenciaAsync(string referencia, CancellationToken ct = default)
     {
         var filter = Builders<OrdenFirmaDocument>.Filter.Eq(x => x.Referencia, referencia);
@@ -26,6 +37,11 @@ public class MongoOrdenFirmaRepository : IOrdenFirmaRepository
     {
         var document = OrdenFirmaDocument.FromDomain(entity);
         await _collection.InsertOneAsync(document, cancellationToken: ct);
+    }
+
+    public Task UpdateStatusAsync(string id, EstadoFirma nuevoEstado, CancellationToken ct = default)
+    {
+        throw new NotImplementedException();
     }
 
     private void EnsureIndexes()

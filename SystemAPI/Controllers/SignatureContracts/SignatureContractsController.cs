@@ -1,4 +1,5 @@
 using Application.Adapters;
+using Application.Internals.Executors;
 using Application.Ports;
 using Domain.Entities.Internals;
 using Microsoft.AspNetCore.Authorization;
@@ -36,7 +37,7 @@ public class SignatureContractsController : ControllerBase
     {
         try
         {
-            
+
             var result = await _signaturePort.CreateAsync(header, body);
 
             if (!result.IsSuccess)
@@ -70,6 +71,53 @@ public class SignatureContractsController : ControllerBase
             });
 
             //return StatusCode(500, EasyResponseHelper.EasyInternalErrorRespond(12001));
+            return StatusCode(500, tracer);
+        }
+    }
+
+    [HttpPut("/document-services-s/signature/control")]
+    [ProducesResponseType(typeof(EasyResult<CancelSignatureContractResponse>), 200)]
+    [ProducesResponseType(400)]
+    [ProducesResponseType(500)]
+    public async Task<IActionResult> CancelarOrden( [FromHeader] SignatureHeaderRequest header, [FromQuery] int? idCanal, [FromQuery] int? idCanalTransaccion)
+    {
+        try
+        {
+            var request = new CancelSignatureContractRequest
+            {
+                IdCanal = idCanal,
+                IdCanalTransaccion = idCanalTransaccion
+            };
+
+            var result = await _signaturePort.CancelAsync(header, request);
+
+            if (!result.IsSuccess)
+            {
+                _logger.LogWarning("TraceId=[{Headers}] Validation=[{ValidationErrors}]", LoggerMapperHelper.ToString(header), string.Join(", ", result.ValidationValues));
+
+                if (result.Status == 404) return NotFound(EasyResponseHelper.WarningResponse(result.ValidationValues));
+
+                return StatusCode(result.Status, EasyResponseHelper.WarningResponse(result.ValidationValues));
+            }
+
+            return Ok(EasyResponseHelper.SuccessResponse(result.SuccessValue!));
+        }
+        catch (Exception ex)
+        {
+            var tracer = Regex.Replace(ex.StackTrace ?? string.Empty, @"\sat\s(.*?)\sin\s", string.Empty).Trim();
+            _logger.LogError("Message=[{Message}] TraceId=[{Headers}] StackTrace={Trace}", ex.Message, LoggerMapperHelper.ToString(header), tracer);
+
+            await _errorPort.SaveAsync(new MicroserviceErrorEntity
+            {
+                ErrorCode = "10098",
+                ChannelId = idCanal ?? 0,
+                Endpoint = "/document-services-s/signature/control",
+                MessageIdentification = header.MessageIdentification,
+                CreatedAt = DateTimeOffset.UtcNow,
+                StackTrace = tracer,
+                Message = ex.Message
+            });
+
             return StatusCode(500, tracer);
         }
     }

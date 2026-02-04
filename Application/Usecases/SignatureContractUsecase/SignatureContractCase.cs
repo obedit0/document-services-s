@@ -143,4 +143,55 @@ public class SignatureContractCase : ISignatureContractPort
             ? EasyResult<CreateSignatureContractResponse>.Failure(422, errors)
             : null;
     }
+
+    public async Task<EasyResult<CancelSignatureContractResponse>> CancelAsync(SignatureHeaderRequest header, CancelSignatureContractRequest request, CancellationToken ct = default)
+    {
+        var validationErrors = await FluentValidationExecutor.ExecuteAsync(request, new CancelSignatureContractRequestValidator());
+        if (validationErrors.Any())
+        {
+            return EasyResult<CancelSignatureContractResponse>.Failure(422, validationErrors);
+        }
+
+        var orden = await _repository.GetByLegacyReferencesAsync(request.IdCanal!.Value, request.IdCanalTransaccion!.Value, ct);
+
+        if (orden is null)
+        {
+            return EasyResult<CancelSignatureContractResponse>.Failure(404, new List<ValidationResultAdapter>());
+        }
+
+        if (orden.Estado == EstadoFirma.CANCELADO)
+        {
+            return EasyResult<CancelSignatureContractResponse>.Success(new CancelSignatureContractResponse
+            {
+                Message = "Orden de firma cancelada exitosamente.",
+                Estado = orden.Estado.ToString()
+            });
+        }
+
+        if (orden.Estado == EstadoFirma.COMPLETADO)
+        {
+            return EasyResult<CancelSignatureContractResponse>.Success(new CancelSignatureContractResponse
+            {
+                Message = "La orden ya ha sido firmada y no se puede cancelar.",
+                Estado = orden.Estado.ToString()
+            });
+        }
+
+        try
+        {
+            await _keynuaClient.CancelContractAsync(orden.Id, ct);
+        }
+        catch (Exception)
+        {
+            return EasyResult<CancelSignatureContractResponse>.Failure(502, new List<ValidationResultAdapter>());
+        }
+
+        await _repository.UpdateStatusAsync(orden.Id, EstadoFirma.CANCELADO, ct);
+
+        return EasyResult<CancelSignatureContractResponse>.Success(new CancelSignatureContractResponse
+        {
+            Message = "Orden de firma cancelada exitosamente.",
+            Estado = EstadoFirma.CANCELADO.ToString()
+        });
+    }
 }

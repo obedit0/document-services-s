@@ -5,4 +5,6 @@ namespace Domain.Interfaces;
 public interface IKeynuaContractClient
 {
     public Task<string> CreateContractAsync(OrdenFirma orden, CancellationToken ct = default);
+
+    Task CancelContractAsync(string keynuaId, CancellationToken ct = default);
 }

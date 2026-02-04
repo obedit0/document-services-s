@@ -7,5 +7,6 @@ public enum EstadoFirma
     COMPLETADO,
     ANULADO,
     EXPIRADO,
-    ERROR
+    ERROR,
+    CANCELADO
 }
