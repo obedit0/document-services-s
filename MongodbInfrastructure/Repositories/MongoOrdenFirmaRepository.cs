@@ -42,9 +42,25 @@ public class MongoOrdenFirmaRepository : IOrdenFirmaRepository
         return document.Id;
     }
 
-    public Task UpdateStatusAsync(string id, EstadoFirma nuevoEstado, CancellationToken ct = default)
+    public async Task UpdateStatusAsync(string id, EstadoFirma nuevoEstado, CancellationToken ct = default)
     {
-        throw new NotImplementedException();
+        var filter = Builders<OrdenFirmaDocument>.Filter.Eq(x => x.Id, id);
+
+        var eventoHistorico = new HistoricoEventoDocument
+        {
+            FechaEvento = DateTime.UtcNow,
+            Fuente = "API",
+            EstadoNuevo = nuevoEstado.ToString(),
+            Motivo = "Actualización de estado vía endpoint de control",
+            EstadoAnterior = null
+        };
+
+        var update = Builders<OrdenFirmaDocument>.Update
+            .Set(x => x.Estado, nuevoEstado.ToString())
+            .Set(x => x.FechaActualizacion, DateTime.UtcNow)
+            .Push(x => x.Historico, eventoHistorico);
+
+        await _collection.UpdateOneAsync(filter, update, cancellationToken: ct);
     }
 
     private void EnsureIndexes()

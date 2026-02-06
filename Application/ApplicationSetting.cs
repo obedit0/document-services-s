@@ -3,11 +3,13 @@ using Application.Usecases.ErrorUsecase;
 using Application.Usecases.ExampleUsecase;
 using Application.Usecases.SignatureContractUsecase;
 using Domain.Containers.MemoryEvent;
+using Domain.Interfaces;
 using FakeApiInfrastructure;
 using InternalHttpClientInfrastructure;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using MongodbInfrastructure;
+using MongodbInfrastructure.Repositories;
 
 /* ********************************************************************************************************          
 # * Copyright © 2026 Arify Labs - All rights reserved.   
@@ -42,5 +44,7 @@ public static class ApplicationSetting
         services.AddTransient<IExamplePort, ExampleCase>();
         services.AddTransient<ISignatureContractPort, SignatureContractCase>();
         services.AddTransient<IErrorInternalPort, ErrorInternalCase>();
+        
+        services.AddSingleton<IParametroFirmaRepository, MongoParametroFirmaRepository>();
     }
 }

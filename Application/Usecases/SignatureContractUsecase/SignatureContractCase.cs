@@ -1,13 +1,12 @@
 using Application.Adapters;
-using Application.Internals.Executors;
 using Application.Internals.Adapters;
+using Application.Internals.Executors;
 using Application.Ports;
 using Domain.Entities.Client;
+using Domain.Entities.SignatureContract;
 using Domain.Entities.SignatureContracts;
 using Domain.Enums;
 using Domain.Interfaces;
-using Domain.Catalogs;
-using System.Text.Json;
 
 namespace Application.Usecases.SignatureContractUsecase;
 
@@ -15,11 +14,13 @@ public class SignatureContractCase : ISignatureContractPort
 {
     private readonly IOrdenFirmaRepository _repository;
     private readonly IKeynuaContractClient _keynuaClient;
+    private readonly IParametroFirmaRepository _paramRepository;
 
-    public SignatureContractCase(IOrdenFirmaRepository repository, IKeynuaContractClient keynuaClient)
+    public SignatureContractCase(IOrdenFirmaRepository repository, IKeynuaContractClient keynuaClient, IParametroFirmaRepository paramRepository)
     {
         _repository = repository;
         _keynuaClient = keynuaClient;
+        _paramRepository = paramRepository;
     }
 
     public async Task<EasyResult<CreateSignatureContractResponse>> CreateAsync(SignatureHeaderRequest header, CreateSignatureContractRequest request, CancellationToken ct = default)
@@ -177,28 +178,35 @@ public class SignatureContractCase : ISignatureContractPort
         }
 
         var orden = await _repository.GetByLegacyReferencesAsync(request.IdCanal!.Value, request.IdCanalTransaccion!.Value, ct);
-
         if (orden is null)
         {
             return EasyResult<CancelSignatureContractResponse>.Failure(404, new List<ValidationResultAdapter>());
         }
 
-        if (orden.Estado == EstadoFirma.CANCELADO)
+        var configHorario = await _paramRepository.ObtenerConfiguracionAsync(request.IdCanal.Value, "horaLimiteValidacion", ct);
+        var validacionTiempo = ValidarHorarioVencido(orden.FechaCreacion, configHorario);
+
+        if (validacionTiempo.EsVencido)
         {
-            return EasyResult<CancelSignatureContractResponse>.Success(new CancelSignatureContractResponse
+            if (orden.Estado != EstadoFirma.EXPIRADO)
             {
-                Message = "Orden de firma cancelada exitosamente.",
-                Estado = orden.Estado.ToString()
-            });
+                await _repository.UpdateStatusAsync(orden.IdFirma, EstadoFirma.EXPIRADO, ct);
+            }
+
+            var mensajeError = validacionTiempo.MensajeError ?? "El horario para completar la firma ha vencido.";
+            return EasyResult<CancelSignatureContractResponse>.Failure(400, [new ValidationResultAdapter { Code = "FueraDeHorario", Message = mensajeError}]);
         }
 
-        if (orden.Estado == EstadoFirma.COMPLETADO)
+        switch (orden.Estado)
         {
-            return EasyResult<CancelSignatureContractResponse>.Success(new CancelSignatureContractResponse
-            {
-                Message = "La orden ya ha sido firmada y no se puede cancelar.",
-                Estado = orden.Estado.ToString()
-            });
+            case EstadoFirma.PENDIENTE:
+            case EstadoFirma.COMPLETADO:
+                // CONTINUAR EL FLUJO DE CANCELACIÓN
+                break;
+            default:
+                return EasyResult<CancelSignatureContractResponse>.Failure(400,
+                    [new ValidationResultAdapter { Code = "EstadoNoSoportado", Message = $"Estado no soportado para cancelación: {orden.Estado}" }]
+                );
         }
 
         try
@@ -217,5 +225,49 @@ public class SignatureContractCase : ISignatureContractPort
             Message = "Orden de firma cancelada exitosamente.",
             Estado = EstadoFirma.CANCELADO.ToString()
         });
+    }
+
+    private (bool EsVencido, string? MensajeError) ValidarHorarioVencido(DateTimeOffset fechaCreacion, ParametroFirma? config)
+    {
+        int horaLimite = config?.Hora ?? 19;
+        int minutoLimite = config?.Minuto ?? 0;
+        string timeZoneId = config?.ZonaHoraria ?? "America/Lima";
+        string mensajeBase = config?.Descripcion ?? "El horario ha vencido. Hora límite: ";
+
+        try
+        {
+            TimeZoneInfo timeZone;
+            try
+            {
+                timeZone = TimeZoneInfo.FindSystemTimeZoneById(timeZoneId);
+            }
+            catch
+            {
+                timeZone = TimeZoneInfo.CreateCustomTimeZone("PeruFallback", TimeSpan.FromHours(-5), "Peru Time", "Peru Time");
+            }
+
+            var ahoraEnZona = TimeZoneInfo.ConvertTime(DateTimeOffset.UtcNow, timeZone);
+            var creacionEnZona = TimeZoneInfo.ConvertTime(fechaCreacion, timeZone);
+
+            if (ahoraEnZona.Date > creacionEnZona.Date)
+            {
+                return (true, $"{mensajeBase} {horaLimite}:{minutoLimite:00}");
+            }
+
+            if (ahoraEnZona.Date == creacionEnZona.Date)
+            {
+                var tiempoLimite = new TimeSpan(horaLimite, minutoLimite, 0);
+                if (ahoraEnZona.TimeOfDay > tiempoLimite)
+                {
+                    return (true, $"{mensajeBase} {horaLimite}:{minutoLimite:00}");
+                }
+            }
+
+            return (false, null);
+        }
+        catch (Exception)
+        {
+            return (false, null);
+        }
     }
 }
