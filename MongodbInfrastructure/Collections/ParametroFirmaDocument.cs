@@ -1,4 +1,4 @@
-﻿using Domain.Entities.SignatureContract;
+﻿using Domain.Entities.SignatureContracts;
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization.Attributes;
 

@@ -16,9 +16,16 @@ public static class MessageCatalog
         {21010, "Use alphanumeric characters (a-z and 0-9)"},
         {21011, "Use allowed characters (a-z)"},
         {21012, "Use numeric characters"},
+        {21013, "## must be greater than 0" },
         {21096, "Does not authorize data processing"},
         {21097, "Incorrect parameters"},
-        {21098, "General internal error"}
+        {21098, "General internal error"},
+        {21101, "The signature order does not exist for the provided parameters"},
+        {21102, "The request has expired (time limit exceeded). You must generate a new request"},
+        {21103, "Cannot cancel a request in status ##"},
+        {21104, "The order is already in status ##, no action required"},
+        {21105, "Error attempting to cancel the order with the external provider"},
+        {21106, "Unsupported status for the operation: ##"}
     };
 
     public static string GetErrorByCode(int nCode, string cName = "elemento")

@@ -2,8 +2,8 @@ using Application.Adapters;
 using Application.Internals.Adapters;
 using Application.Internals.Executors;
 using Application.Ports;
+using Domain.Catalogs;
 using Domain.Entities.Client;
-using Domain.Entities.SignatureContract;
 using Domain.Entities.SignatureContracts;
 using Domain.Enums;
 using Domain.Interfaces;
@@ -180,7 +180,7 @@ public class SignatureContractCase : ISignatureContractPort
         var orden = await _repository.GetByLegacyReferencesAsync(request.IdCanal!.Value, request.IdCanalTransaccion!.Value, ct);
         if (orden is null)
         {
-            return EasyResult<CancelSignatureContractResponse>.Failure(404, new List<ValidationResultAdapter>());
+            return EasyResult<CancelSignatureContractResponse>.Failure(404, [new() { Code = "21101", Message = MessageCatalog.GetErrorByCode(21101) }]);
         }
 
         var configHorario = await _paramRepository.ObtenerConfiguracionAsync(request.IdCanal.Value, "horaLimiteValidacion", ct);
@@ -193,8 +193,8 @@ public class SignatureContractCase : ISignatureContractPort
                 await _repository.UpdateStatusAsync(orden.IdFirma, EstadoFirma.EXPIRADO, ct);
             }
 
-            var mensajeError = validacionTiempo.MensajeError ?? "El horario para completar la firma ha vencido.";
-            return EasyResult<CancelSignatureContractResponse>.Failure(400, [new ValidationResultAdapter { Code = "FueraDeHorario", Message = mensajeError}]);
+            var mensajeError = validacionTiempo.MensajeError ?? MessageCatalog.GetErrorByCode(21102);
+            return EasyResult<CancelSignatureContractResponse>.Failure(400, [new() { Code = "21102", Message = mensajeError }]);
         }
 
         switch (orden.Estado)
@@ -204,9 +204,7 @@ public class SignatureContractCase : ISignatureContractPort
                 // CONTINUAR EL FLUJO DE CANCELACIÓN
                 break;
             default:
-                return EasyResult<CancelSignatureContractResponse>.Failure(400,
-                    [new ValidationResultAdapter { Code = "EstadoNoSoportado", Message = $"Estado no soportado para cancelación: {orden.Estado}" }]
-                );
+                return EasyResult<CancelSignatureContractResponse>.Failure(400, [new() { Code = "21106", Message = MessageCatalog.GetErrorByCode(21106, orden.Estado.ToString()) }]);
         }
 
         try
@@ -215,7 +213,7 @@ public class SignatureContractCase : ISignatureContractPort
         }
         catch (Exception)
         {
-            return EasyResult<CancelSignatureContractResponse>.Failure(502, new List<ValidationResultAdapter>());
+            return EasyResult<CancelSignatureContractResponse>.Failure(502, [new() { Code = "21105", Message = MessageCatalog.GetErrorByCode(21105) }]);
         }
 
         await _repository.UpdateStatusAsync(orden.IdOrdenProveedor, EstadoFirma.CANCELADO, ct);

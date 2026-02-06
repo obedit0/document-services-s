@@ -1,4 +1,4 @@
-﻿namespace Domain.Entities.SignatureContract
+﻿namespace Domain.Entities.SignatureContracts
 {
     public class ParametroFirma
     {

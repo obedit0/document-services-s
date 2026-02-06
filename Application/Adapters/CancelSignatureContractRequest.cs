@@ -15,10 +15,10 @@ public class CancelSignatureContractRequestValidator : AbstractValidator<CancelS
     {
         RuleFor(x => x.IdCanal)
             .NotNull().WithMessage(MessageCatalog.GetErrorByCode(21002)).WithErrorCode("21002")
-            .GreaterThan(0).WithMessage("El IdCanal debe ser mayor a 0").WithErrorCode("21002");
+            .GreaterThan(0).WithMessage(MessageCatalog.GetErrorByCode(21013, "IdCanal")).WithErrorCode("21013");
 
         RuleFor(x => x.IdCanalTransaccion)
             .NotNull().WithMessage(MessageCatalog.GetErrorByCode(21002)).WithErrorCode("21002")
-            .GreaterThan(0).WithMessage("El IdCanalTransaccion debe ser mayor a 0").WithErrorCode("21002");
+            .GreaterThan(0).WithMessage(MessageCatalog.GetErrorByCode(21013, "IdCanalTransaccion")).WithErrorCode("21013");
     }
 }

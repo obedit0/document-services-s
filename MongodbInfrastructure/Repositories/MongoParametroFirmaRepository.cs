@@ -1,4 +1,4 @@
-﻿using Domain.Entities.SignatureContract;
+﻿using Domain.Entities.SignatureContracts;
 using Domain.Interfaces;
 using MongoDB.Driver;
 using MongodbInfrastructure.Collections;
