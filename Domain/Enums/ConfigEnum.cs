@@ -8,9 +8,10 @@ public enum EstadoFirma
     PENDIENTE,
     EN_PROCESO,
     COMPLETADO,
-    ANULADO,
+    ANULADO,        //Cuando se extorna la solicitud
     EXPIRADO,
-    ERROR
+    ERROR,
+    CANCELADO       //Cuando el usuario cancela la solicitud manualmente
 }
 public enum DocumentType
 {

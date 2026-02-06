@@ -1,4 +1,5 @@
 using Domain.Entities.SignatureContracts;
+using Domain.Enums;
 using Domain.Interfaces;
 using MongoDB.Driver;
 using MongodbInfrastructure.Collections;
@@ -18,9 +19,10 @@ public class MongoOrdenFirmaRepository : IOrdenFirmaRepository
     public async Task<OrdenFirma?> GetByLegacyReferencesAsync(int idCanal, int idCanalTransaccion, CancellationToken ct = default)
     {
         var filter = Builders<OrdenFirmaDocument>.Filter.And(
-            Builders<OrdenFirmaDocument>.Filter.Eq("canal", idCanal),
-            Builders<OrdenFirmaDocument>.Filter.Eq("keyword", idCanalTransaccion)
-        );
+       Builders<OrdenFirmaDocument>.Filter.Eq("canal", idCanal),
+       Builders<OrdenFirmaDocument>.Filter.Eq("keyword", idCanalTransaccion),
+       Builders<OrdenFirmaDocument>.Filter.Eq("estado", EstadoFirma.PENDIENTE.ToString())
+   );
 
         var document = await _collection.Find(filter).FirstOrDefaultAsync(ct);
         return document?.ToDomain();

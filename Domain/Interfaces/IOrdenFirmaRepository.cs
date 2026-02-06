@@ -1,4 +1,5 @@
 using Domain.Entities.SignatureContracts;
+using Domain.Enums;
 
 namespace Domain.Interfaces;
 

@@ -203,14 +203,14 @@ public class SignatureContractCase : ISignatureContractPort
 
         try
         {
-            await _keynuaClient.CancelContractAsync(orden.Id, ct);
+            await _keynuaClient.CancelContractAsync(orden.IdOrdenProveedor, ct);
         }
         catch (Exception)
         {
             return EasyResult<CancelSignatureContractResponse>.Failure(502, new List<ValidationResultAdapter>());
         }
 
-        await _repository.UpdateStatusAsync(orden.Id, EstadoFirma.CANCELADO, ct);
+        await _repository.UpdateStatusAsync(orden.IdOrdenProveedor, EstadoFirma.CANCELADO, ct);
 
         return EasyResult<CancelSignatureContractResponse>.Success(new CancelSignatureContractResponse
         {
