@@ -32,7 +32,7 @@ public class OrdenFirmaDocument
     public string? Descripcion { get; set; }
 
     [BsonElement("canal")]
-    public string? Canal { get; set; }
+    public int Canal { get; set; }
 
     [BsonElement("hora_expiracion")]
     public DateTime? HoraExpiracion { get; set; }
@@ -83,7 +83,7 @@ public class OrdenFirmaDocument
             FirmaEnTodosDocumentos = FirmaEnTodosDocumentos ?? false,
             IdTiposNotificacion = IdTiposNotificacion ?? new List<string>(),
             Pagare = Pagare,
-            Clientes = Clientes.Select(MapClienteToDomain).Cast<ClientEntity>().ToList(),
+            Clientes = Clientes.Select(MapClienteToDomain).ToList(),
             Documentos = Documentos.Select(d => new Documento
             {
                 IdDocumento = d.IdDocumento,
@@ -121,7 +121,7 @@ public class OrdenFirmaDocument
             IdOrdenProveedor = entity.IdOrdenProveedor,
             Titulo = entity.Titulo,
             Descripcion = entity.Descripcion,
-            Canal = entity.Canal.ToString(),
+            Canal = (int)entity.Canal,
             HoraExpiracion = entity.HoraExpiracion,
             FirmaEnTodosDocumentos = entity.FirmaEnTodosDocumentos,
             IdTiposNotificacion = entity.IdTiposNotificacion,
@@ -182,7 +182,7 @@ public class OrdenFirmaDocument
         };
     }
 
-    private static ClientEntity MapClienteToDomain(ClienteDocument cliente)
+    private static NaturalClientEntity MapClienteToDomain(ClienteDocument cliente)
     {
         var identity = int.TryParse(cliente.IdCliente, out var id) ? id : (int?)null;
         var identityDocument = BuildIdentityDocument(cliente);
@@ -231,17 +231,11 @@ public class OrdenFirmaDocument
         return identityDocument;
     }
 
-    private static Channel ParseChannel(string? value)
+    private static Channel ParseChannel(int value)
     {
-        if (string.IsNullOrWhiteSpace(value))
-            return Channel.Ventanilla;
-
-        if (int.TryParse(value, out var numeric) && Enum.IsDefined(typeof(Channel), numeric))
-            return (Channel)numeric;
-
-        return Enum.TryParse<Channel>(value, true, out var channel)
-            ? channel
-            : Channel.Ventanilla;
+        return Enum.IsDefined(typeof(Channel), value)
+        ? (Channel)value
+        : Channel.Ventanilla;
     }
 }
 

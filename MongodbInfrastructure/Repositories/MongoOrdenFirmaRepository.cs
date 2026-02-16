@@ -15,9 +15,9 @@ public class MongoOrdenFirmaRepository : IOrdenFirmaRepository
         EnsureIndexes();
     }
 
-    public async Task<OrdenFirma?> GetByReferenciaAsync(string referencia, CancellationToken ct = default)
+    public async Task<OrdenFirma?> GetByKeywordAsync(string keyword, CancellationToken ct = default)
     {
-        var filter = Builders<OrdenFirmaDocument>.Filter.Eq(x => x.Referencia, referencia);
+        var filter = Builders<OrdenFirmaDocument>.Filter.Eq(x => x.Keyword,keyword);
         var document = await _collection.Find(filter).FirstOrDefaultAsync(ct);
         return document?.ToDomain();
     }

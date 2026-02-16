@@ -15,7 +15,7 @@ public class OrdenFirma
     public required DateTime HoraExpiracion { get; set; }
     public bool FirmaEnTodosDocumentos { get; set; }
     public required List<string> IdTiposNotificacion { get; set; }
-    public required List<ClientEntity> Clientes { get; set; }
+    public required List<NaturalClientEntity> Clientes { get; set; }
     public required List<Documento> Documentos { get; set; }
     public EstadoFirma Estado { get; set; }
     public DateTimeOffset FechaCreacion { get; set; }

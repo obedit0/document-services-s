@@ -1,13 +1,11 @@
 using Application.Adapters;
 using Application.Internals.Executors;
-using Application.Internals.Adapters;
 using Application.Ports;
 using Domain.Entities.Client;
 using Domain.Entities.SignatureContracts;
 using Domain.Enums;
 using Domain.Interfaces;
-using Domain.Catalogs;
-using System.Text.Json;
+using Channel = Domain.Enums.Channel;
 
 namespace Application.Usecases.SignatureContractUsecase;
 
@@ -28,7 +26,7 @@ public class SignatureContractCase : ISignatureContractPort
         if (validationResult != null)
             return validationResult;
 
-        //var existing = await _repository.GetByReferenciaAsync(request.Referencia!, ct);
+        //var existing = await _repository.GetByKeywordAsync(request.Keyword!, string channel, ct);
         //if (existing is not null)
         //{
         //    return EasyResult<CreateSignatureContractResponse>.Success(MapToResponse(existing));
@@ -76,29 +74,25 @@ public class SignatureContractCase : ISignatureContractPort
                     IdentityDocument = identityDocument
                 };
             })
-            .Cast<ClientEntity>()
-            .ToList() ?? new List<ClientEntity>();
+            .ToList();
 
         var documentos = request.Documentos
             ?.Select(documento => new Documento
             {
-                IdDocumento = documento.IdDocumento ?? string.Empty,
-                TipoDocumento = documento.TipoDocumento ?? string.Empty,
-                NombreDocumento = documento.IdDocumento ?? string.Empty,
-                OwnerClient = documento.OwnerClienteId ?? string.Empty,
-                S3KeyOriginal = documento.S3KeyOriginal ?? string.Empty
+                IdDocumento = documento.IdDocumento!,
+                TipoDocumento = documento.TipoDocumento!,
+                NombreDocumento = documento.IdDocumento!,
+                OwnerClient = documento.OwnerClienteId!,
+                S3KeyOriginal = documento.S3KeyOriginal!
             })
-            .ToList() ?? new List<Documento>();
+            .ToList();
 
         var canal = ParseChannel(request.Canal);
-        var keyword = !string.IsNullOrWhiteSpace(request.Keyword)
-            ? request.Keyword
-            : request.Referencia ?? request.Titulo ?? string.Empty;
+        var keyword = request.Keyword;
         var horaExpiracion = request.HoraExpiracion?.UtcDateTime ?? DateTime.UtcNow.AddHours(24);
 
         var ordenFirma = new OrdenFirma
         {
-            IdFirma = Guid.NewGuid().ToString("N"),
             Referencia = request.Referencia ?? string.Empty,
             Keyword = keyword,
             Titulo = request.Titulo ?? string.Empty,

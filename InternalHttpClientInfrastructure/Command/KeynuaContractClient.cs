@@ -26,12 +26,12 @@ public sealed class KeynuaContractClient : IKeynuaContractClient
     public async Task<string> CreateContractAsync(OrdenFirma orden, CancellationToken ct = default)
     {
         var payload = BuildKeynuaRequest(orden);
-        var options = new JsonSerializerOptions
-        {
-            PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-        };
-        string jsonstring = JsonSerializer.Serialize(payload, options);
-        Console.WriteLine(jsonstring);
+        //var options = new JsonSerializerOptions
+        //{
+        //    PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+        //};
+        //string jsonstring = JsonSerializer.Serialize(payload, options);
+        //Console.WriteLine(jsonstring);
         var response = await _httpClientBuilder
             .WithBaseUrl(_options.BaseUrl)
             .WithEndpoint("contracts/v1")
