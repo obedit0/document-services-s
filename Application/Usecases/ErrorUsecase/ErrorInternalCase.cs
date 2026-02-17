@@ -26,7 +26,7 @@ public sealed class ErrorInternalCase : IErrorInternalPort
             RequestPayload = entity.Payload,
             ErrorMessage = entity.Message ?? string.Empty,
             ErrorStackTrace = entity.StackTrace ?? string.Empty,
-            Datetime = entity.CreatedAt.UtcDateTime,
+            Datetime = entity.CreatedAt,
             IsResolved = false
         };
 

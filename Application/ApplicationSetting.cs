@@ -1,7 +1,10 @@
 using Application.Ports;
 using Application.Usecases.ErrorUsecase;
 using Application.Usecases.ExampleUsecase;
+using Application.Usecases.GetOrderByProviderIdUsecase;
 using Application.Usecases.SignatureContractUsecase;
+using Application.Usecases.UpdateProviderDocumentsUsecase;
+using Application.Usecases.UpdateSignedDocumentsUsecase;
 using Domain.Containers.MemoryEvent;
 using FakeApiInfrastructure;
 using InternalHttpClientInfrastructure;
@@ -41,6 +44,9 @@ public static class ApplicationSetting
         //Dependency inyection        
         services.AddTransient<IExamplePort, ExampleCase>();
         services.AddTransient<ISignatureContractPort, SignatureContractCase>();
+        services.AddTransient<IUpdateSignedDocumentsPort, UpdateSignedDocumentsCase>();
+        services.AddTransient<IUpdateProviderDocumentsPort, UpdateProviderDocumentsCase>();
+        services.AddTransient<IGetOrderByProviderIdPort, GetOrderByProviderIdCase>();
         services.AddTransient<IErrorInternalPort, ErrorInternalCase>();
     }
 }

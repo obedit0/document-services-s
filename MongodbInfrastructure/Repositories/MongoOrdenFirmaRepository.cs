@@ -17,7 +17,14 @@ public class MongoOrdenFirmaRepository : IOrdenFirmaRepository
 
     public async Task<OrdenFirma?> GetByKeywordAsync(string keyword, CancellationToken ct = default)
     {
-        var filter = Builders<OrdenFirmaDocument>.Filter.Eq(x => x.Keyword,keyword);
+        var filter = Builders<OrdenFirmaDocument>.Filter.Eq(x => x.Id,keyword);
+        var document = await _collection.Find(filter).FirstOrDefaultAsync(ct);
+        return document?.ToDomain();
+    }
+
+    public async Task<OrdenFirma?> GetByProviderIdAsync(string idOrdenProveedor, CancellationToken ct = default)
+    {
+        var filter = Builders<OrdenFirmaDocument>.Filter.Eq(x => x.IdOrdenProveedor, idOrdenProveedor);
         var document = await _collection.Find(filter).FirstOrDefaultAsync(ct);
         return document?.ToDomain();
     }
@@ -27,6 +34,21 @@ public class MongoOrdenFirmaRepository : IOrdenFirmaRepository
         var document = OrdenFirmaDocument.FromDomain(entity);
         await _collection.InsertOneAsync(document, cancellationToken: ct);
         return document.Id;
+    }
+
+    public async Task<bool> UpdateAsync(OrdenFirma entity, CancellationToken ct = default)
+    {
+        var document = OrdenFirmaDocument.FromDomain(entity);
+        var filter = Builders<OrdenFirmaDocument>.Filter.Eq(x => x.Keyword, entity.Keyword);
+        
+        var update = Builders<OrdenFirmaDocument>.Update
+            .Set(x => x.Documentos, document.Documentos)
+            .Set(x => x.Estado, document.Estado)
+            .Set(x => x.FechaActualizacion, document.FechaActualizacion)
+            .Set(x => x.Historico, document.Historico);
+
+        var result = await _collection.UpdateOneAsync(filter, update, cancellationToken: ct);
+        return result.ModifiedCount > 0;
     }
 
     private void EnsureIndexes()

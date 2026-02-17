@@ -78,17 +78,15 @@ public class SignatureContractCase : ISignatureContractPort
         var documentos = request.Documentos
             ?.Select(documento => new Documento
             {
-                IdDocumento = documento.IdDocumento!,
-                TipoDocumento = documento.TipoDocumento!,
-                NombreDocumento = documento.IdDocumento!,
-                OwnerClient = documento.OwnerClienteId!,
+                Name = documento.Name!,
+                OwnerClients = documento.OwnerClientId ?? [],
                 S3KeyOriginal = documento.S3KeyOriginal!
             })
             .ToList();
 
         var canal = ParseChannel(request.Canal);
         var keyword = request.Keyword;
-        var horaExpiracion = request.HoraExpiracion?.UtcDateTime ?? DateTime.UtcNow.AddHours(24);
+        var horaExpiracion = request.HoraExpiracion ?? DateTime.UtcNow.AddHours(24);
 
         var ordenFirma = new OrdenFirma
         {
