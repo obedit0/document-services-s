@@ -169,20 +169,26 @@ public sealed class KeynuaContractClient : IKeynuaContractClient
 
     public async Task CancelContractAsync(string keynuaId, CancellationToken ct = default)
     {
-        if (string.IsNullOrWhiteSpace(keynuaId))
-            throw new ArgumentException("El ID de Keynua no puede estar vacío.");
-
-        var response = await _httpClientBuilder
-            .WithBaseUrl(_options.BaseUrl)
-            .WithEndpoint($"contracts/v1/{keynuaId}")
-            .WithHeader("x-api-key", _options.ApiKey)
-            .WithHeader("authorization", _options.Authorization)
-            .DeleteAsync<object>(ct);
-
-        if (!response.IsSuccess)
+        try
         {
-            _logger.LogError("Error cancelando en Keynua. Status: {Status}, Content: {Content}", response.StatusCode, response.Content);
-            throw new HttpRequestException($"Keynua API Error: {response.StatusCode}");
+            if (string.IsNullOrWhiteSpace(keynuaId))
+                throw new ArgumentException("El ID de Keynua no puede estar vacío.");
+
+            var response = await _httpClientBuilder
+                .WithBaseUrl(_options.BaseUrl)
+                .WithEndpoint($"contracts/v1/{keynuaId}")
+                .WithHeader("x-api-key", _options.ApiKey)
+                .WithHeader("authorization", _options.Authorization)
+                .DeleteAsync<object>(ct);
+
+            if (!response.IsSuccess)
+            {
+                _logger.LogError("Error cancelando en Keynua. Status: {Status}, Content: {Content}", response.StatusCode, response.Content);
+                throw new HttpRequestException($"Keynua API Error: {response.StatusCode}");
+            }
+        }
+        catch (Exception e)
+        {
         }
     }
 }

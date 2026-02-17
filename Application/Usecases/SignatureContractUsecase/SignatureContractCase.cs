@@ -204,15 +204,8 @@ public class SignatureContractCase : ISignatureContractPort
                 return EasyResult<CancelSignatureContractResponse>.Failure(400, [new() { Code = "21106", Message = MessageCatalog.GetErrorByCode(21106, orden.Estado.ToString()) }]);
         }
 
-        try
-        {
-            await _keynuaClient.CancelContractAsync(orden.IdOrdenProveedor, ct);
-        }
-        catch (Exception)
-        {
-            return EasyResult<CancelSignatureContractResponse>.Failure(502, [new() { Code = "21105", Message = MessageCatalog.GetErrorByCode(21105) }]);
-        }
-
+        await _keynuaClient.CancelContractAsync(orden.IdOrdenProveedor, ct);
+        
         await _repository.UpdateStatusAsync(orden.IdOrdenProveedor, EstadoFirma.CANCELADO, ct);
 
         return EasyResult<CancelSignatureContractResponse>.Success(new CancelSignatureContractResponse
@@ -264,5 +257,43 @@ public class SignatureContractCase : ISignatureContractPort
         {
             return (false, null);
         }
+    }
+
+    public async Task<EasyResult<GetSignatureDocumentStatusResponse>> GetDocumentStatusAsync(GetSignatureDocumentStatusRequest request, CancellationToken ct = default)
+    {
+        var validationErrors = await FluentValidationExecutor.ExecuteAsync(request, new GetSignatureDocumentStatusValidator());
+        if (validationErrors.Any()) return EasyResult<GetSignatureDocumentStatusResponse>.Failure(422, validationErrors);
+
+        var orden = await _repository.GetByLegacyReferencesAsync(request.IdCanal!.Value, request.IdCanalTransaccion!.Value, ct);
+        if (orden is null) return EasyResult<GetSignatureDocumentStatusResponse>.Failure(404, [new() { Code = "21101", Message = MessageCatalog.GetErrorByCode(21101) }]);
+
+        var response = new GetSignatureDocumentStatusResponse
+        {
+            IdFirma = orden.IdFirma,
+            Estado = orden.Estado.ToString(),
+            IdOrdenProveedor = orden.IdOrdenProveedor ?? string.Empty,
+            Documentos = []
+        };
+
+        bool validS3 = orden.Documentos.Count != 0 && orden.Documentos.All(d => !string.IsNullOrEmpty(d.S3KeyFirmado) && d.S3KeyFirmadoExpiresAt.HasValue && d.S3KeyFirmadoExpiresAt.Value > DateTime.UtcNow);
+
+        bool validProviderCache = orden.Documentos.Count != 0 && orden.Documentos.All(d => !string.IsNullOrEmpty(d.ProviderKeyFirmado) && d.ProviderKeyFirmadoExpiresAt.HasValue && d.ProviderKeyFirmadoExpiresAt.Value > DateTime.UtcNow);
+
+        if (validS3)
+        {
+            response.Action = "USE_S3";
+            response.Documentos = [.. orden.Documentos.Select(d => new DocumentStatusDto { Nombre = d.Name, Tipo = "PDF", S3Key = d.S3KeyFirmado, Url = null})];
+        }
+        else if (validProviderCache)
+        {
+            response.Action = "USE_CACHE";
+            response.Documentos = [.. orden.Documentos.Select(d => new DocumentStatusDto { Nombre = d.Name, Tipo = "PDF", Url = d.ProviderKeyFirmado, S3Key = null })];
+        }
+        else
+        {
+            response.Action = "FETCH_PROVIDER";
+        }
+
+        return EasyResult<GetSignatureDocumentStatusResponse>.Success(response);
     }
 }

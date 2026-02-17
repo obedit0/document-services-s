@@ -1,4 +1,5 @@
 using Domain.Entities.Client;
+using Domain.Entities.SignatureContract;
 using Domain.Enums;
 
 namespace Domain.Entities.SignatureContracts;
@@ -21,5 +22,8 @@ public class OrdenFirma
     public DateTime FechaCreacion { get; set; }
     public DateTime FechaActualizacion { get; set; }
     public List<HistoricoEvento>? Historico { get; set; }
-    public required bool Pagare { get; set; } 
+    public required bool Pagare { get; set; }
+    public DateTime? VigenciaKeynua { get; set; }
+    public DateTime? VigenciaS3 { get; set; }
+    public List<DocumentoFirmado>? DocumentosFirmados { get; set; }
 }

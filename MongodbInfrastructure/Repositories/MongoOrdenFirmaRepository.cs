@@ -57,10 +57,8 @@ public class MongoOrdenFirmaRepository : IOrdenFirmaRepository
     public async Task<OrdenFirma?> GetByLegacyReferencesAsync(int idCanal, int idCanalTransaccion, CancellationToken ct = default)
     {
         var filter = Builders<OrdenFirmaDocument>.Filter.And(
-       Builders<OrdenFirmaDocument>.Filter.Eq("canal", idCanal),
-       Builders<OrdenFirmaDocument>.Filter.Eq("keyword", idCanalTransaccion),
-       Builders<OrdenFirmaDocument>.Filter.Eq("estado", EstadoFirma.PENDIENTE.ToString())
-   );
+            Builders<OrdenFirmaDocument>.Filter.Eq("canal", idCanal),
+            Builders<OrdenFirmaDocument>.Filter.Eq("keyword", idCanalTransaccion.ToString()));
 
         var document = await _collection.Find(filter).FirstOrDefaultAsync(ct);
         return document?.ToDomain();

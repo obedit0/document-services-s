@@ -260,4 +260,52 @@ public class SignatureContractsController : ControllerBase
             return StatusCode(500, tracer);
         }
     }
+
+    /// <summary>
+    /// Consulta el estado y ubicación de los documentos (S3 de CLA | S3 de Keynua).
+    /// </summary>
+    [HttpGet("documents")]
+    public async Task<IActionResult> GetDocumentStatus([FromHeader] SignatureHeaderRequest header, [FromQuery] int? idCanal, [FromQuery] int? idCanalTransaccion)
+    {
+        try
+        {
+            var request = new GetSignatureDocumentStatusRequest
+            {
+                IdCanal = idCanal,
+                IdCanalTransaccion = idCanalTransaccion
+            };
+
+            var result = await _signaturePort.GetDocumentStatusAsync(request);
+
+            if (!result.IsSuccess)
+            {
+                _logger.LogWarning("TraceId=[{Headers}] Validation=[{ValidationErrors}]", LoggerMapperHelper.ToString(header), LoggerMapperHelper.ToString(result.ValidationValues.FirstOrDefault()!));
+
+                if (result.Status == 404)
+                    return NotFound(EasyResponseHelper.WarningResponse(result.ValidationValues));
+
+                return StatusCode(result.Status, EasyResponseHelper.WarningResponse(result.ValidationValues));
+            }
+
+            return Ok(EasyResponseHelper.SuccessResponse(result.SuccessValue!));
+        }
+        catch (Exception ex)
+        {
+            var tracer = Regex.Replace(ex.StackTrace ?? string.Empty, @"\sat\s(.*?)\sin\s", string.Empty).Trim();
+            _logger.LogError("Message=[{Message}] TraceId=[{Headers}] StackTrace={Trace}", ex.Message, LoggerMapperHelper.ToString(header), tracer);
+
+            await _errorPort.SaveAsync(new MicroserviceErrorEntity
+            {
+                ErrorCode = "12005",
+                ChannelId = idCanal ?? 0,
+                Endpoint = $"{API_ENDPOINT}/documents",
+                MessageIdentification = header.MessageIdentification,
+                CreatedAt = DateTime.UtcNow.AddHours(-5),
+                StackTrace = tracer,
+                Message = ex.Message
+            });
+
+            return StatusCode(500, tracer);
+        }
+    }
 }

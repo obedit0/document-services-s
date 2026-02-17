@@ -1,9 +1,11 @@
 using Domain.Entities.Client;
+using Domain.Entities.SignatureContract;
 using Domain.Entities.SignatureContracts;
 using Domain.Enums;
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization.Attributes;
 using MongodbInfrastructure.Serializers;
+using System.Reflection.Metadata;
 
 namespace MongodbInfrastructure.Collections;
 
@@ -64,6 +66,15 @@ public class OrdenFirmaDocument
     [BsonElement("pagare")]
     public bool Pagare { get; set; }
 
+    [BsonElement("vigenciaKeynua")]
+    public DateTime? VigenciaKeynua { get; set; }
+
+    [BsonElement("vigenciaS3")]
+    public DateTime? VigenciaS3 { get; set; }
+
+    [BsonElement("documentosFirmados")]
+    public List<DocumentoFirmadoDocument>? DocumentosFirmados { get; set; }
+
     public OrdenFirma ToDomain()
     {
         var canal = ParseChannel(Canal);
@@ -107,7 +118,15 @@ public class OrdenFirmaDocument
                 Motivo = h.Motivo,
                 ActorId = h.ActorId,
                 ProviderEventId = h.ProviderEventId
-            }).ToList()
+            }).ToList(),
+            VigenciaKeynua = VigenciaKeynua,
+            VigenciaS3 = VigenciaS3,
+            DocumentosFirmados = DocumentosFirmados?.Select(d => new DocumentoFirmado
+            {
+                Nombre = d.Nombre,
+                Url = d.Url,
+                Tipo = d.Tipo
+            }).ToList() ?? new List<DocumentoFirmado>()
         };
     }
 
@@ -149,6 +168,14 @@ public class OrdenFirmaDocument
                 Motivo = h.Motivo,
                 ActorId = h.ActorId,
                 ProviderEventId = h.ProviderEventId
+            }).ToList(),
+            VigenciaKeynua = entity.VigenciaKeynua,
+            VigenciaS3 = entity.VigenciaS3,
+            DocumentosFirmados = entity.DocumentosFirmados?.Select(d => new DocumentoFirmadoDocument
+            {
+                Nombre = d.Nombre,
+                Url = d.Url,
+                Tipo = d.Tipo
             }).ToList()
         };
     }
