@@ -171,7 +171,7 @@ public class SignatureContractCase : ISignatureContractPort
 
     public async Task<EasyResult<CancelSignatureContractResponse>> CancelAsync(SignatureHeaderRequest header, CancelSignatureContractRequest request, CancellationToken ct = default)
     {
-        var validationErrors = await FluentValidationExecutor.ExecuteAsync(request, new CancelSignatureContractRequestValidator());
+        var validationErrors = await FluentValidationExecutor.ExecuteAsync(request, new CancelSignatureContractRequestValidator(), ct);
         if (validationErrors.Any())
         {
             return EasyResult<CancelSignatureContractResponse>.Failure(422, validationErrors);
@@ -184,16 +184,16 @@ public class SignatureContractCase : ISignatureContractPort
         }
 
         var configHorario = await _paramRepository.ObtenerConfiguracionAsync(request.IdCanal.Value, "horaLimiteValidacion", ct);
-        var validacionTiempo = ValidarHorarioVencido(orden.FechaCreacion, configHorario);
+        var (EsVencido, MensajeError) = ValidarHorarioVencido(orden.FechaCreacion, configHorario);
 
-        if (validacionTiempo.EsVencido)
+        if (EsVencido)
         {
             if (orden.Estado != EstadoFirma.EXPIRADO)
             {
                 await _repository.UpdateStatusAsync(orden.IdFirma, EstadoFirma.EXPIRADO, ct);
             }
 
-            var mensajeError = validacionTiempo.MensajeError ?? MessageCatalog.GetErrorByCode(21102);
+            var mensajeError = MensajeError ?? MessageCatalog.GetErrorByCode(21102);
             return EasyResult<CancelSignatureContractResponse>.Failure(400, [new() { Code = "21102", Message = mensajeError }]);
         }
 
@@ -225,7 +225,7 @@ public class SignatureContractCase : ISignatureContractPort
         });
     }
 
-    private (bool EsVencido, string? MensajeError) ValidarHorarioVencido(DateTimeOffset fechaCreacion, ParametroFirma? config)
+    private static (bool EsVencido, string? MensajeError) ValidarHorarioVencido(DateTimeOffset fechaCreacion, ParametroFirma? config)
     {
         int horaLimite = config?.Hora ?? 19;
         int minutoLimite = config?.Minuto ?? 0;
