@@ -11,7 +11,7 @@ public class CreateSignatureContractRequest
     public string? Titulo { get; set; }
     public string? Descripcion { get; set; }
     public string? Canal { get; set; }
-    public DateTimeOffset? HoraExpiracion { get; set; }
+    public DateTime? HoraExpiracion { get; set; }
     public required List<string> IdTiposNotificacion { get; set; }
     public bool FirmaEnTodoDocumentos { get; set; }
     public bool Pagare { get; set; }
@@ -32,12 +32,9 @@ public class ClienteRequest
 
 public class DocumentoRequest
 {
-    public string? IdDocumento { get; set; }
-    public string? TipoDocumento { get; set; }
-    public string? OwnerClienteId { get; set; }
+    public string? Name { get; set; }
+    public List<string>? OwnerClientId { get; set; }
     public string? S3KeyOriginal { get; set; }
-    public string? S3KeyFirmado { get; set; }
-    public string? ProviderKeyFirmado { get; set; }
 }
 
 public class ObservadorRequest
@@ -81,23 +78,25 @@ public class CreateSignatureContractRequestValidator : AbstractValidator<CreateS
             return;
 
         var clienteIds = request.Clientes
-            .Where(x => !string.IsNullOrWhiteSpace(x.IdCliente))
-            .Select(x => x.IdCliente!)
+            .Where(x => !string.IsNullOrWhiteSpace(x.NumeroDocumento))
+            .Select(x => x.NumeroDocumento!)
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
         foreach (var documento in request.Documentos)
         {
-            if (documento is null)
+            if (documento?.OwnerClientId is null || documento.OwnerClientId.Count == 0)
                 continue;
 
-            var ownerId = documento.OwnerClienteId ?? string.Empty;
-            if (ownerId.Length == 0 || clienteIds.Contains(ownerId))
+            foreach (var ownerId in documento.OwnerClientId)
             {
-                context.AddFailure(new ValidationFailure(nameof(CreateSignatureContractRequest.Documentos), MessageCatalog.GetErrorByCode(21007))
+                if (!clienteIds.Contains(ownerId))
                 {
-                    ErrorCode = "21007"
-                });
-                return;
+                    context.AddFailure(new ValidationFailure(nameof(CreateSignatureContractRequest.Documentos), MessageCatalog.GetErrorByCode(21007))
+                    {
+                        ErrorCode = "21007"
+                    });
+                    return;
+                }
             }
         }
     }
@@ -122,13 +121,10 @@ public class DocumentoRequestValidator : AbstractValidator<DocumentoRequest>
 {
     public DocumentoRequestValidator()
     {
-        RuleFor(x => x.IdDocumento)
+        RuleFor(x => x.Name)
             .NotEmpty().WithMessage(MessageCatalog.GetErrorByCode(21002)).WithErrorCode("21002");
 
-        RuleFor(x => x.TipoDocumento)
-            .NotEmpty().WithMessage(MessageCatalog.GetErrorByCode(21002)).WithErrorCode("21002");
-
-        RuleFor(x => x.OwnerClienteId)
+        RuleFor(x => x.OwnerClientId)
             .NotEmpty().WithMessage(MessageCatalog.GetErrorByCode(21002)).WithErrorCode("21002");
 
         RuleFor(x => x.S3KeyOriginal)

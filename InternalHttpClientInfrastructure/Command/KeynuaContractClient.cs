@@ -26,12 +26,12 @@ public sealed class KeynuaContractClient : IKeynuaContractClient
     public async Task<string> CreateContractAsync(OrdenFirma orden, CancellationToken ct = default)
     {
         var payload = BuildKeynuaRequest(orden);
-        var options = new JsonSerializerOptions
-        {
-            PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-        };
-        string jsonstring = JsonSerializer.Serialize(payload, options);
-        Console.WriteLine(jsonstring);
+        //var options = new JsonSerializerOptions
+        //{
+        //    PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+        //};
+        //string jsonstring = JsonSerializer.Serialize(payload, options);
+        //Console.WriteLine(jsonstring);
         var response = await _httpClientBuilder
             .WithBaseUrl(_options.BaseUrl)
             .WithEndpoint("contracts/v1")
@@ -55,15 +55,16 @@ public sealed class KeynuaContractClient : IKeynuaContractClient
         var documents = (orden.Documentos ?? new List<Documento>())
             .Select(documento => new KeynuaDocumentRequest
             {
-                Name = string.IsNullOrWhiteSpace(documento.NombreDocumento) ? documento.IdDocumento : documento.NombreDocumento,
+                Name = documento.Name,
                 Base64 = documento.S3KeyOriginal,
-                RefId = documento.IdDocumento
+                RefId = documento.Name
             })
             .ToList();
 
         var documentsByOwner = (orden.Documentos ?? new List<Documento>())
-            .GroupBy(documento => documento.OwnerClient)
-            .ToDictionary(grupo => grupo.Key, grupo => grupo.Select(documento => documento.IdDocumento).ToList());
+            .SelectMany(documento => documento.OwnerClients.Select(owner => new { Owner = owner, DocName = documento.Name }))
+            .GroupBy(x => x.Owner)
+            .ToDictionary(grupo => grupo.Key, grupo => grupo.Select(x => x.DocName).ToList());
 
         var allDocumentRefs = documents.Select(documento => documento.RefId).ToList();
 

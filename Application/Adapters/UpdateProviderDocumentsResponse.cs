@@ -1,10 +1,9 @@
 namespace Application.Adapters;
 
-public class CreateSignatureContractResponse
+public class UpdateProviderDocumentsResponse
 {
     public string? IdFirma { get; set; }
-    public string? Referencia { get; set; }
     public string? Estado { get; set; }
-    public DateTime FechaCreacion { get; set; }
     public DateTime FechaActualizacion { get; set; }
+    public int DocumentosActualizados { get; set; }
 }

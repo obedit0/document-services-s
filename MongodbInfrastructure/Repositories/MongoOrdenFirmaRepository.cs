@@ -3,6 +3,8 @@ using Domain.Enums;
 using Domain.Interfaces;
 using MongoDB.Driver;
 using MongodbInfrastructure.Collections;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace MongodbInfrastructure.Repositories;
 
@@ -16,21 +18,16 @@ public class MongoOrdenFirmaRepository : IOrdenFirmaRepository
         EnsureIndexes();
     }
 
-    public async Task<OrdenFirma?> GetByLegacyReferencesAsync(int idCanal, int idCanalTransaccion, CancellationToken ct = default)
+    public async Task<OrdenFirma?> GetByKeywordAsync(string keyword, CancellationToken ct = default)
     {
-        var filter = Builders<OrdenFirmaDocument>.Filter.And(
-       Builders<OrdenFirmaDocument>.Filter.Eq("canal", idCanal),
-       Builders<OrdenFirmaDocument>.Filter.Eq("keyword", idCanalTransaccion),
-       Builders<OrdenFirmaDocument>.Filter.Eq("estado", EstadoFirma.PENDIENTE.ToString())
-   );
-
+        var filter = Builders<OrdenFirmaDocument>.Filter.Eq(x => x.Id,keyword);
         var document = await _collection.Find(filter).FirstOrDefaultAsync(ct);
         return document?.ToDomain();
     }
 
-    public async Task<OrdenFirma?> GetByReferenciaAsync(string referencia, CancellationToken ct = default)
+    public async Task<OrdenFirma?> GetByProviderIdAsync(string idOrdenProveedor, CancellationToken ct = default)
     {
-        var filter = Builders<OrdenFirmaDocument>.Filter.Eq(x => x.Referencia, referencia);
+        var filter = Builders<OrdenFirmaDocument>.Filter.Eq(x => x.IdOrdenProveedor, idOrdenProveedor);
         var document = await _collection.Find(filter).FirstOrDefaultAsync(ct);
         return document?.ToDomain();
     }
@@ -42,6 +39,32 @@ public class MongoOrdenFirmaRepository : IOrdenFirmaRepository
         return document.Id;
     }
 
+    public async Task<bool> UpdateAsync(OrdenFirma entity, CancellationToken ct = default)
+    {
+        var document = OrdenFirmaDocument.FromDomain(entity);
+        var filter = Builders<OrdenFirmaDocument>.Filter.Eq(x => x.Keyword, entity.Keyword);
+        
+        var update = Builders<OrdenFirmaDocument>.Update
+            .Set(x => x.Documentos, document.Documentos)
+            .Set(x => x.Estado, document.Estado)
+            .Set(x => x.FechaActualizacion, document.FechaActualizacion)
+            .Set(x => x.Historico, document.Historico);
+
+        var result = await _collection.UpdateOneAsync(filter, update, cancellationToken: ct);
+        return result.ModifiedCount > 0;
+    }
+
+    public async Task<OrdenFirma?> GetByLegacyReferencesAsync(int idCanal, int idCanalTransaccion, CancellationToken ct = default)
+    {
+        var filter = Builders<OrdenFirmaDocument>.Filter.And(
+       Builders<OrdenFirmaDocument>.Filter.Eq("canal", idCanal),
+       Builders<OrdenFirmaDocument>.Filter.Eq("keyword", idCanalTransaccion),
+       Builders<OrdenFirmaDocument>.Filter.Eq("estado", EstadoFirma.PENDIENTE.ToString())
+   );
+
+        var document = await _collection.Find(filter).FirstOrDefaultAsync(ct);
+        return document?.ToDomain();
+    }
     public async Task UpdateStatusAsync(string id, EstadoFirma nuevoEstado, CancellationToken ct = default)
     {
         var filter = Builders<OrdenFirmaDocument>.Filter.Eq(x => x.Id, id);
