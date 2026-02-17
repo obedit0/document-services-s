@@ -3,6 +3,7 @@ using Domain.Entities.SignatureContracts;
 using Domain.Enums;
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization.Attributes;
+using MongodbInfrastructure.Serializers;
 
 namespace MongodbInfrastructure.Collections;
 
@@ -29,7 +30,9 @@ public class OrdenFirmaDocument
     public string? Descripcion { get; set; }
 
     [BsonElement("canal")]
+    [BsonSerializer(typeof(ChannelSerializer))]
     public int Canal { get; set; }
+
 
     [BsonElement("hora_expiracion")]
     public DateTime? HoraExpiracion { get; set; }
@@ -83,14 +86,13 @@ public class OrdenFirmaDocument
             Clientes = Clientes.Select(MapClienteToDomain).ToList(),
             Documentos = Documentos.Select(d => new Documento
             {
-                IdDocumento = d.IdDocumento,
-                TipoDocumento = d.TipoDocumento,
-                NombreDocumento = string.IsNullOrWhiteSpace(d.NombreDocumento) ? d.IdDocumento : d.NombreDocumento,
-                OwnerClient = d.OwnerClienteId,
+                Name = d.Name,
+                OwnerClients = d.OwnerClientes ?? [],
                 S3KeyOriginal = d.S3KeyOriginal,
-                HashSha256 = d.HashSha256,
                 S3KeyFirmado = d.S3KeyFirmado,
+                S3KeyFirmadoExpiresAt = d.S3KeyFirmadoExpiresAt,
                 ProviderKeyFirmado = d.ProviderKeyFirmado,
+                ProviderKeyFirmadoExpiresAt = d.ProviderKeyFirmadoExpiresAt,
                 FechaFirma = d.FechaFirma
             }).ToList(),
             Estado = Enum.TryParse<EstadoFirma>(Estado, true, out var estado) ? estado : EstadoFirma.PENDIENTE,
@@ -98,7 +100,7 @@ public class OrdenFirmaDocument
             FechaActualizacion = FechaActualizacion,
             Historico = Historico?.Select(h => new HistoricoEvento
             {
-                FechaEvento = h.FechaEvento.UtcDateTime,
+                FechaEvento = h.FechaEvento,
                 Fuente = h.Fuente,
                 EstadoAnterior = Enum.TryParse<EstadoFirma>(h.EstadoAnterior, true, out var estadoAnterior) ? estadoAnterior : null,
                 EstadoNuevo = Enum.TryParse<EstadoFirma>(h.EstadoNuevo, true, out var estadoNuevo) ? estadoNuevo : EstadoFirma.PENDIENTE,
@@ -126,14 +128,13 @@ public class OrdenFirmaDocument
             Clientes = entity.Clientes.Select(MapClienteFromDomain).ToList(),
             Documentos = entity.Documentos.Select(d => new DocumentoDocument
             {
-                IdDocumento = d.IdDocumento,
-                TipoDocumento = d.TipoDocumento,
-                NombreDocumento = d.NombreDocumento,
-                OwnerClienteId = d.OwnerClient,
+                Name = d.Name,
+                OwnerClientes = d.OwnerClients ?? [],
                 S3KeyOriginal = d.S3KeyOriginal,
-                HashSha256 = d.HashSha256,
                 S3KeyFirmado = d.S3KeyFirmado,
+                S3KeyFirmadoExpiresAt = d.S3KeyFirmadoExpiresAt,
                 ProviderKeyFirmado = d.ProviderKeyFirmado,
+                ProviderKeyFirmadoExpiresAt = d.ProviderKeyFirmadoExpiresAt,
                 FechaFirma = d.FechaFirma
             }).ToList(),
             Estado = entity.Estado.ToString(),
@@ -231,11 +232,12 @@ public class OrdenFirmaDocument
     private static Channel ParseChannel(int value)
     {
         return Enum.IsDefined(typeof(Channel), value)
-        ? (Channel)value
-        : Channel.Ventanilla;
+            ? (Channel)value
+            : Channel.Ventanilla;
     }
 }
 
+[BsonIgnoreExtraElements]
 public class ClienteDocument
 {
     [BsonElement("id_cliente")]
@@ -273,6 +275,7 @@ public class ClienteDocument
     public string? Telefono { get; set; }
 }
 
+[BsonIgnoreExtraElements]
 public class AddressDocument
 {
     [BsonElement("identity")]
@@ -294,41 +297,41 @@ public class AddressDocument
     public string? PostalCode { get; set; }
 }
 
+
+[BsonIgnoreExtraElements]
 public class DocumentoDocument
 {
-    [BsonElement("id_documento")]
-    public string IdDocumento { get; set; } = string.Empty;
+    [BsonElement("name")]
+    public string Name { get; set; } = string.Empty;
 
-    [BsonElement("tipo_documento")]
-    public string TipoDocumento { get; set; } = string.Empty;
-
-    [BsonElement("nombre_documento")]
-    public string NombreDocumento { get; set; } = string.Empty;
-
-    [BsonElement("owner_cliente_id")]
-    public string OwnerClienteId { get; set; } = string.Empty;
+    [BsonElement("owner_clientes")]
+    public List<string> OwnerClientes { get; set; } = [];
 
     [BsonElement("s3_key_original")]
     public string S3KeyOriginal { get; set; } = string.Empty;
 
-    [BsonElement("hash_sha256")]
-    public string? HashSha256 { get; set; }
-
     [BsonElement("s3_key_firmado")]
     public string? S3KeyFirmado { get; set; }
+
+    [BsonElement("s3_key_firmado_expires_at")]
+    public DateTime? S3KeyFirmadoExpiresAt { get; set; }
 
     [BsonElement("provider_key_firmado")]
     public string? ProviderKeyFirmado { get; set; }
 
+    [BsonElement("provider_key_firmado_expires_at")]
+    public DateTime? ProviderKeyFirmadoExpiresAt { get; set; }
+
     [BsonElement("fecha_firma")]
-    public DateTimeOffset? FechaFirma { get; set; }
+    public DateTime? FechaFirma { get; set; }
 }
 
 
+[BsonIgnoreExtraElements]
 public class HistoricoEventoDocument
 {
     [BsonElement("fecha_evento")]
-    public DateTimeOffset FechaEvento { get; set; }
+    public DateTime FechaEvento { get; set; }
 
     [BsonElement("fuente")]
     public string? Fuente { get; set; }

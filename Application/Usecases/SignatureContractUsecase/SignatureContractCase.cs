@@ -79,10 +79,8 @@ public class SignatureContractCase : ISignatureContractPort
         var documentos = request.Documentos
             ?.Select(documento => new Documento
             {
-                IdDocumento = documento.IdDocumento!,
-                TipoDocumento = documento.TipoDocumento!,
-                NombreDocumento = documento.IdDocumento!,
-                OwnerClient = documento.OwnerClienteId!,
+                Name = documento.Name!,
+                OwnerClients = documento.OwnerClientId ?? [],
                 S3KeyOriginal = documento.S3KeyOriginal!
             })
             .ToList();
