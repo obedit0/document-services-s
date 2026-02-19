@@ -23,6 +23,7 @@ public class OrdenFirma
     public DateTime FechaActualizacion { get; set; }
     public List<HistoricoEvento>? Historico { get; set; }
     public required bool Pagare { get; set; }
+    public int? CreditNumber { get; set; }
     public DateTime? VigenciaKeynua { get; set; }
     public DateTime? VigenciaS3 { get; set; }
     public List<DocumentoFirmado>? DocumentosFirmados { get; set; }

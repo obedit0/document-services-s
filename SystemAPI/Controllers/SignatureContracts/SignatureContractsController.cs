@@ -1,3 +1,6 @@
+using Application.Adapters.Common;
+using Application.Adapters.SignatureContracts;
+using Application.Adapters.UpdateDocuments;
 using Application.Adapters;
 using Application.Internals.Executors;
 using Application.Ports;

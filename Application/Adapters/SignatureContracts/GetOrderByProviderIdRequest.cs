@@ -1,7 +1,7 @@
 using Domain.Catalogs;
 using FluentValidation;
 
-namespace Application.Adapters;
+namespace Application.Adapters.SignatureContracts;
 
 public class GetOrderByProviderIdRequest
 {

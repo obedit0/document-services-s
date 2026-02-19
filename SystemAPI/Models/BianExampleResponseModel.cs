@@ -1,4 +1,4 @@
-﻿using Application.Adapters;
+﻿using Application.Adapters.Examples;
 using System.Text.Json.Serialization;
 using SystemAPI.Models.Internals;
 

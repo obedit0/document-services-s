@@ -1,5 +1,7 @@
+using Domain.Containers.MemoryEvent;
 using Domain.Entities.Client;
 using Domain.Entities.SignatureContracts;
+using Domain.Enums;
 using Domain.Interfaces;
 using InternalHttpClientInfrastructure.Collections;
 using InternalHttpClientInfrastructure.Services;
@@ -13,14 +15,18 @@ namespace InternalHttpClientInfrastructure.Queries;
 public sealed class KeynuaContractClient : IKeynuaContractClient
 {
     private readonly HttpClientBuilder _httpClientBuilder;
+    private readonly IHttpClientFactory _httpClientFactory;
+    private readonly MicroserviceCallMemoryQueue _memQueue;
     private readonly ILogger<KeynuaContractClient> _logger;
     private readonly KeynuaContext _options;
 
-    public KeynuaContractClient(HttpClientBuilder httpClientBuilder, ILogger<KeynuaContractClient> logger, IOptions<KeynuaContext> options)
+    public KeynuaContractClient(HttpClientBuilder httpClientBuilder, IHttpClientFactory httpClientFactory, ILogger<KeynuaContractClient> logger, IOptions<KeynuaContext> options, MicroserviceCallMemoryQueue memQueue)
     {
         _httpClientBuilder = httpClientBuilder;
+        _httpClientFactory = httpClientFactory;
         _logger = logger;
         _options = options.Value;
+        _memQueue = memQueue;
     }
 
     public async Task<string> CreateContractAsync(OrdenFirma orden, CancellationToken ct = default)
@@ -32,9 +38,11 @@ public sealed class KeynuaContractClient : IKeynuaContractClient
         //};
         //string jsonstring = JsonSerializer.Serialize(payload, options);
         //Console.WriteLine(jsonstring);
-        var response = await _httpClientBuilder
+        var httpClient = new HttpClientBuilder(_httpClientFactory, _logger);
+        var response = await httpClient
             .WithBaseUrl(_options.BaseUrl)
             .WithEndpoint("contracts/v1")
+            .WithMemoryQueue(_memQueue, "Crear.orden.firma", orden.Keyword!.ToString())
             .WithHeader("x-api-key", _options.ApiKey)
             .WithHeader("authorization", _options.Authorization)
             .PutAsync<KeynuaContractPropertiesResponse>(payload, ct);
@@ -49,6 +57,32 @@ public sealed class KeynuaContractClient : IKeynuaContractClient
         }
 
         return response.Content.Id;
+    }
+
+    public async Task<string?> GetContractStatusAsync(
+        string idContract,
+        Channel canal,
+        string messageIdentity,
+        CancellationToken ct = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(idContract);
+        ArgumentException.ThrowIfNullOrWhiteSpace(messageIdentity);
+
+        var httpClient = new HttpClientBuilder(_httpClientFactory, _logger);
+        var response = await httpClient
+            .WithBaseUrl(_options.BaseUrl)
+            .WithEndpoint($"contracts/v1/{idContract}")
+            .WithMemoryQueue(_memQueue, "Consultar.estado.firma", idContract)
+            .WithHeader("x-api-key", _options.ApiKey)
+            .WithHeader("authorization", _options.Authorization)
+            .GetAsync<KeynuaContractPropertiesResponse>(ct);
+
+        if (!response.IsSuccess || response.Content is null)
+        {
+            throw new ArgumentException("Error con la peticion a Keynua: estado de contrato");
+        }
+
+        return response.Content.Status;
     }
     private KeynuaSignatureRequest BuildKeynuaRequest(OrdenFirma orden)
     {
@@ -118,6 +152,7 @@ public sealed class KeynuaContractClient : IKeynuaContractClient
 
         var expirationDatetime = DateTime.SpecifyKind(orden.HoraExpiracion, DateTimeKind.Utc).ToUniversalTime();
         var notificationOptions = orden.IdTiposNotificacion ?? new List<string>();
+        var cavaliData = BuildCavaliData(orden);
 
         return new KeynuaSignatureRequest
         {
@@ -139,7 +174,8 @@ public sealed class KeynuaContractClient : IKeynuaContractClient
                 {
                     AddSignatureOnAllDocs = orden.FirmaEnTodosDocumentos
                 },
-                ChosenNotificationOptions = notificationOptions
+                ChosenNotificationOptions = notificationOptions,
+                CavaliData = cavaliData
             }
         };
     }
@@ -165,6 +201,45 @@ public sealed class KeynuaContractClient : IKeynuaContractClient
             return trimmed;
 
         return "51" + trimmed;
+    }
+
+    private KeynuaCavaliDataRequest? BuildCavaliData(OrdenFirma orden)
+    {
+        if (!orden.Pagare)
+            return null;
+
+        var primaryClient = orden.Clientes?.FirstOrDefault();
+
+        return new KeynuaCavaliDataRequest
+        {
+            Client = primaryClient,
+            UniqueCode = primaryClient?.Identity,
+            ClientName = primaryClient is null ? null : GetClientName(primaryClient),
+            Domicile = GetClientDomicile(primaryClient),
+            IssuedDate = DateTime.Today.ToString("yyyy-MM-dd"),
+            Banking = _options.Banking,
+            Product = _options.Product,
+            CreditNumber = orden.CreditNumber
+        };
+    }
+
+    private static string? GetClientDomicile(ClientEntity? client)
+    {
+        var address = client?.Addresses?.FirstOrDefault();
+        if (address is null)
+            return null;
+
+        var parts = new[]
+        {
+            address.Name,
+            address.Street,
+            address.Number,
+            address.Reference,
+            address.PostalCode
+        };
+
+        var domicile = string.Join(" ", parts.Where(part => !string.IsNullOrWhiteSpace(part)));
+        return string.IsNullOrWhiteSpace(domicile) ? null : domicile;
     }
 
     public async Task CancelContractAsync(string keynuaId, CancellationToken ct = default)

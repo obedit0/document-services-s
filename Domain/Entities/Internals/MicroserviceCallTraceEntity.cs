@@ -7,10 +7,9 @@ public class MicroserviceCallTraceEntity
     public required string ChannelId { get; set; }
     public required string DeviceId { get; set; }
     public string? Keyword { get; set; }  // usuario/dni/dispositivo
-    public required string MicroserviceName { get; set; } = "SystemApi3.0"; // This Project
+    public string MicroserviceName { get; set; } = "SystemApi3.0"; // This Project
     public required string OperationName { get; set; } // Transfer.GetBalance.execute
     public required string RequestUrl { get; set; }
-    public string? RequestHeader { get; set; }
     public string? RequestPayload { get; set; }
     public required DateTime RequestDatetime { get; set; } = DateTime.UtcNow.AddHours(-5);
     public required int ResponseStatusCode { get; set; }

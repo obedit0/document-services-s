@@ -1,4 +1,4 @@
-﻿namespace Application.Adapters;
+﻿namespace Application.Adapters.Examples;
 
 public class RetrieveExampleAdapter
 {

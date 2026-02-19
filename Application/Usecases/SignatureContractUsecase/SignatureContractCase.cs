@@ -1,12 +1,17 @@
+using Application.Adapters.Common;
+using Application.Adapters.SignatureContracts;
+using Application.Internals.Adapters;
 using Application.Adapters;
 using Application.Internals.Adapters;
 using Application.Internals.Executors;
 using Application.Ports;
 using Domain.Catalogs;
 using Domain.Entities.Client;
+using Domain.Entities.Config;
 using Domain.Entities.SignatureContracts;
 using Domain.Enums;
 using Domain.Interfaces;
+using System.Threading.Tasks;
 using Channel = Domain.Enums.Channel;
 
 namespace Application.Usecases.SignatureContractUsecase;
@@ -14,12 +19,18 @@ namespace Application.Usecases.SignatureContractUsecase;
 public class SignatureContractCase : ISignatureContractPort
 {
     private readonly IOrdenFirmaRepository _repository;
+    private readonly IChannelConfigRepository _channelConfigRepository;
     private readonly IKeynuaContractClient _keynuaClient;
     private readonly IParametroFirmaRepository _paramRepository;
 
-    public SignatureContractCase(IOrdenFirmaRepository repository, IKeynuaContractClient keynuaClient, IParametroFirmaRepository paramRepository)
+    public SignatureContractCase(
+        IOrdenFirmaRepository repository, 
+        IChannelConfigRepository channelConfigRepository,
+        IKeynuaContractClient keynuaClient,
+        IParametroFirmaRepository paramRepository)
     {
         _repository = repository;
+        _channelConfigRepository = channelConfigRepository;
         _keynuaClient = keynuaClient;
         _paramRepository = paramRepository;
     }
@@ -30,25 +41,91 @@ public class SignatureContractCase : ISignatureContractPort
         if (validationResult != null)
             return validationResult;
 
-        //var existing = await _repository.GetByKeywordAsync(request.Keyword!, string channel, ct);
-        //if (existing is not null)
-        //{
-        //    return EasyResult<CreateSignatureContractResponse>.Success(MapToResponse(existing));
-        //}
+        var canal = ParseChannel(header.Channel);
+        var channelConfig = await _channelConfigRepository.GetByChannelIdAsync((int)canal, ct);
+        
+        var configValidation = ValidateChannelConfig(channelConfig, request);
+        if (configValidation != null)
+            return configValidation;
 
-        //var channelConfig = awsit chanelQuery.getConfigurationById(idCanal: header.ChannelIdentity);
-        //ValidateAsync =
+        var existingOrder = await _repository.GetByKeywordAndChannelAsync(request.Keyword!, (int)canal, ct);
+        if (existingOrder != null)
+            return EasyResult<CreateSignatureContractResponse>.Failure(409, [Error("21008", "Orden de firma ya existe", "Keyword")]);
 
-        var ordenFirma = MapToDomain(request);
+        OrdenFirma ordenFirma = MapToDomain(request, header);
+        if (ordenFirma.Pagare)
+        {
+            var count = await _repository.GetCountByKeywordAndChannelAsync(request.Keyword!, (int)canal);
+            ordenFirma.CreditNumber = int.Parse(((int)canal).ToString() + request.Keyword!.ToString() + count.ToString());
+        }
         ordenFirma.IdOrdenProveedor = await _keynuaClient.CreateContractAsync(ordenFirma, ct);
-
-        //var now = DateTimeOffset.UtcNow.ToOffset(_utcOffset);
-
         ordenFirma.IdFirma = await _repository.InsertAsync(ordenFirma, ct);
+
         return EasyResult<CreateSignatureContractResponse>.Success(MapToResponse(ordenFirma));
     }
-    
-    private static OrdenFirma MapToDomain(CreateSignatureContractRequest request)
+
+    private static EasyResult<CreateSignatureContractResponse>? ValidateChannelConfig(
+        ChannelEntity? channelConfig, 
+        CreateSignatureContractRequest request)
+    {
+        var error = GetChannelConfigError(channelConfig, request);
+        return error is null ? null : EasyResult<CreateSignatureContractResponse>.Failure(400, [error]);
+    }
+
+    private static ValidationResultAdapter? GetChannelConfigError(
+        ChannelEntity? config, 
+        CreateSignatureContractRequest request)
+    {
+        if (config is null)
+            return Error("21020", "Canal no configurado", "Canal");
+
+        if (!config.Enabled)
+            return Error("21021", "Canal deshabilitado", "Canal");
+
+        var upload = config.DocumentsUpload;
+        if (upload is null) return null;
+
+        if (request.HoraExpiracion is not null && request.HoraExpiracion.Value.Date != DateTime.Today)
+            return Error("21023", "Fecha de expiracion no valida", "HoraExpiracion");
+
+        if (upload.AllowedWindow is not null && request.HoraExpiracion is not null && !IsWithinTimeWindow(upload.AllowedWindow, request.HoraExpiracion.Value))
+            return Error("21023", FormatTimeWindowMessage(upload.AllowedWindow), "HoraExpiracion");
+
+        if (request.Documentos is null) return null;
+
+        var docCount = request.Documentos.Count;
+        if (docCount > upload.MaxDocuments)
+            return Error("21022", $"Documentos ({docCount}) excede lï¿½mite ({upload.MaxDocuments})", "Documentos");
+
+        var totalBytes = request.Documentos.Sum(d => d.Size);
+        if (totalBytes > upload.MaxTotalBytes)
+            return Error("21024", $"Tamaï¿½o ({totalBytes / 1048576} MB) excede lï¿½mite ({upload.MaxTotalBytes / 1048576} MB)", "Documentos");
+
+        return null;
+    }
+
+    private static bool IsWithinTimeWindow(AllowedWindowConfig window, DateTime expiration)
+    {
+        if (expiration.Date != DateTime.Today)
+            return false;
+
+        var time = expiration.TimeOfDay;
+        var from = TimeSpan.FromMinutes(window.FromMin);
+        var to = TimeSpan.FromMinutes(window.ToMin);
+        
+        return from <= to 
+            ? time >= from && time <= to 
+            : time >= from || time <= to;
+    }
+
+    private static string FormatTimeWindowMessage(AllowedWindowConfig window) =>
+        $"Fuera de horario ({window.FromMin / 60:00}:{window.FromMin % 60:00} - {window.ToMin / 60:00}:{window.ToMin % 60:00})";
+
+    private static ValidationResultAdapter Error(string code, string message, string field) =>
+        new() { Code = code, Message = message, Field = field };
+
+
+    private static OrdenFirma MapToDomain(CreateSignatureContractRequest request, SignatureHeaderRequest header)
     {
         var firmantes = request.Clientes
             ?.Select(cliente =>
@@ -88,20 +165,19 @@ public class SignatureContractCase : ISignatureContractPort
             })
             .ToList();
 
-        var canal = ParseChannel(request.Canal);
-        var keyword = request.Keyword;
-        var horaExpiracion = request.HoraExpiracion ?? DateTime.UtcNow.AddHours(24);
+
+        var canal = ParseChannel(header.Channel);
 
         var ordenFirma = new OrdenFirma
         {
             Referencia = request.Referencia ?? string.Empty,
-            Keyword = request.Keyword,
+            Keyword = request.Keyword ?? string.Empty,
             Titulo = request.Titulo ?? string.Empty,
             Descripcion = request.Descripcion ?? string.Empty,
             Canal = canal,
-            HoraExpiracion = horaExpiracion,
+            HoraExpiracion = request.HoraExpiracion!.Value,
             FirmaEnTodosDocumentos = request.FirmaEnTodoDocumentos,
-            IdTiposNotificacion = request.IdTiposNotificacion,
+            IdTiposNotificacion = request.IdTiposNotificacion!,
             Pagare = request.Pagare,
             Clientes = firmantes,
             Documentos = documentos,
@@ -198,7 +274,7 @@ public class SignatureContractCase : ISignatureContractPort
         {
             case EstadoFirma.PENDIENTE:
             case EstadoFirma.COMPLETADO:
-                // CONTINUAR EL FLUJO DE CANCELACIÓN
+                // CONTINUAR EL FLUJO DE CANCELACIÃ“N
                 break;
             default:
                 return EasyResult<CancelSignatureContractResponse>.Failure(400, [new() { Code = "21106", Message = MessageCatalog.GetErrorByCode(21106, orden.Estado.ToString()) }]);
@@ -220,7 +296,7 @@ public class SignatureContractCase : ISignatureContractPort
         int horaLimite = config?.Hora ?? 19;
         int minutoLimite = config?.Minuto ?? 0;
         string timeZoneId = config?.ZonaHoraria ?? "America/Lima";
-        string mensajeBase = config?.Descripcion ?? "El horario ha vencido. Hora límite: ";
+        string mensajeBase = config?.Descripcion ?? "El horario ha vencido. Hora lÃ­mite: ";
 
         try
         {
@@ -296,4 +372,5 @@ public class SignatureContractCase : ISignatureContractPort
 
         return EasyResult<GetSignatureDocumentStatusResponse>.Success(response);
     }
+
 }

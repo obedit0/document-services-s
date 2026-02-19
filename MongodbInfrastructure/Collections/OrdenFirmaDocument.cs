@@ -66,6 +66,9 @@ public class OrdenFirmaDocument
     [BsonElement("pagare")]
     public bool Pagare { get; set; }
 
+    [BsonElement("vigente")]
+    public bool Vigente { get; set; }
+
     [BsonElement("vigenciaKeynua")]
     public DateTime? VigenciaKeynua { get; set; }
 
@@ -144,6 +147,7 @@ public class OrdenFirmaDocument
             FirmaEnTodosDocumentos = entity.FirmaEnTodosDocumentos,
             IdTiposNotificacion = entity.IdTiposNotificacion,
             Pagare = entity.Pagare,
+            Vigente = true,
             Clientes = entity.Clientes.Select(MapClienteFromDomain).ToList(),
             Documentos = entity.Documentos.Select(d => new DocumentoDocument
             {

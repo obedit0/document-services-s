@@ -1,6 +1,6 @@
-namespace Application.Adapters;
+namespace Application.Adapters.UpdateDocuments;
 
-public class UpdateProviderDocumentsResponse
+public class UpdateSignedDocumentsResponse
 {
     public string? IdFirma { get; set; }
     public string? Estado { get; set; }
