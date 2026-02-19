@@ -19,6 +19,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Domain\Domain.csproj" />
+    <ProjectReference Include="..\AwsSqsInfrastructure\AwsSqsInfrastructure.csproj" />
     <ProjectReference Include="..\FakeApiInfrastructure\FakeApiInfrastructure.csproj" />
     <ProjectReference Include="..\InternalHttpClientInfrastructure\KeynuaInfrastructure.csproj" />
     <ProjectReference Include="..\MongodbInfrastructure\MongodbInfrastructure.csproj" />

@@ -36,10 +36,31 @@ public class MongoOrdenFirmaRepository : IOrdenFirmaRepository
         return document.Id;
     }
 
+    public async Task<OrdenFirma?> GetByKeywordAndChannelAsync(string keyword, int channel, CancellationToken ct = default)
+    {
+        var filter = Builders<OrdenFirmaDocument>.Filter.And(
+            Builders<OrdenFirmaDocument>.Filter.Eq(x => x.Keyword, keyword),
+            Builders<OrdenFirmaDocument>.Filter.Eq(x => x.Canal, channel),
+            Builders<OrdenFirmaDocument>.Filter.Eq(x => x.Vigente, true)
+        );
+        var document = await _collection.Find(filter).FirstOrDefaultAsync(ct);
+        return document?.ToDomain();
+    }
+
+    public async Task<int> GetCountByKeywordAndChannelAsync(string keyword, int channel, CancellationToken ct = default)
+    {
+        var filter = Builders<OrdenFirmaDocument>.Filter.And(
+            Builders<OrdenFirmaDocument>.Filter.Eq(x => x.Keyword, keyword),
+            Builders<OrdenFirmaDocument>.Filter.Eq(x => x.Canal, channel)
+        );
+        var count = await _collection.CountDocumentsAsync(filter, cancellationToken: ct);
+        return (int)count;
+    }
+
     public async Task<bool> UpdateAsync(OrdenFirma entity, CancellationToken ct = default)
     {
         var document = OrdenFirmaDocument.FromDomain(entity);
-        var filter = Builders<OrdenFirmaDocument>.Filter.Eq(x => x.Keyword, entity.Keyword);
+        var filter = Builders<OrdenFirmaDocument>.Filter.Eq(x => x.Id, entity.IdFirma!);
         
         var update = Builders<OrdenFirmaDocument>.Update
             .Set(x => x.Documentos, document.Documentos)

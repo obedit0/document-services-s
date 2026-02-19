@@ -1,4 +1,6 @@
-using Application.Adapters;
+using Application.Adapters.Common;
+using Application.Adapters.SignatureContracts;
+using Application.Adapters.UpdateDocuments;
 using Application.Ports;
 using Domain.Entities.Internals;
 using Microsoft.AspNetCore.Authorization;

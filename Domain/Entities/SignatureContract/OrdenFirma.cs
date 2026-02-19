@@ -21,5 +21,6 @@ public class OrdenFirma
     public DateTime FechaCreacion { get; set; }
     public DateTime FechaActualizacion { get; set; }
     public List<HistoricoEvento>? Historico { get; set; }
-    public required bool Pagare { get; set; } 
+    public required bool Pagare { get; set; }
+    public int? CreditNumber { get; set; }
 }

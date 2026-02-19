@@ -2,10 +2,14 @@ using Application.Ports;
 using Application.Usecases.ErrorUsecase;
 using Application.Usecases.ExampleUsecase;
 using Application.Usecases.GetOrderByProviderIdUsecase;
+using Application.Usecases.SignatureStatusUsecase;
+using Application.Usecases.MicroserviceCallTraceUsecase;
 using Application.Usecases.SignatureContractUsecase;
+using Application.Usecases.SqsUsecase;
 using Application.Usecases.UpdateProviderDocumentsUsecase;
 using Application.Usecases.UpdateSignedDocumentsUsecase;
 using Domain.Containers.MemoryEvent;
+using AwsSqsInfrastructure;
 using FakeApiInfrastructure;
 using InternalHttpClientInfrastructure;
 using Microsoft.Extensions.Configuration;
@@ -40,6 +44,7 @@ public static class ApplicationSetting
         services.AddFakeApiInfrastructure();
         services.AddKeynuaInfrastructure(configuration,isDevelopment);
         services.AddMongodbInfrastructure(configuration);
+        services.AddAwsSqsInfrastructure(configuration);
 
         //Dependency inyection        
         services.AddTransient<IExamplePort, ExampleCase>();
@@ -48,5 +53,8 @@ public static class ApplicationSetting
         services.AddTransient<IUpdateProviderDocumentsPort, UpdateProviderDocumentsCase>();
         services.AddTransient<IGetOrderByProviderIdPort, GetOrderByProviderIdCase>();
         services.AddTransient<IErrorInternalPort, ErrorInternalCase>();
+        services.AddTransient<IGetSignatureStatusPort, GetSignatureStatusCase>();
+        services.AddTransient<IMicroserviceCallTracePort, MicroserviceCallTraceSqsCase>();
+        services.AddTransient<ISqsTestPort, SqsSendTestCase>();
     }
 }

@@ -1,24 +1,24 @@
 using Domain.Catalogs;
 using FluentValidation;
 
-namespace Application.Adapters;
+namespace Application.Adapters.UpdateDocuments;
 
-public class UpdateSignedDocumentsRequest
+public class UpdateProviderDocumentsRequest
 {
     public string? IdFirma { get; set; }
-    public List<SignedDocumentRequest>? Documents { get; set; }
+    public List<ProviderDocumentRequest>? Documents { get; set; }
 }
 
-public class SignedDocumentRequest
+public class ProviderDocumentRequest
 {
     public string? Name { get; set; }
-    public string? S3KeyFirmado { get; set; }
+    public string? ProviderKeyFirmado { get; set; }
     public DateTime? UrlExpiresAt { get; set; }
 }
 
-public class UpdateSignedDocumentsRequestValidator : AbstractValidator<UpdateSignedDocumentsRequest>
+public class UpdateProviderDocumentsRequestValidator : AbstractValidator<UpdateProviderDocumentsRequest>
 {
-    public UpdateSignedDocumentsRequestValidator()
+    public UpdateProviderDocumentsRequestValidator()
     {
         RuleFor(x => x.IdFirma)
             .NotEmpty().WithMessage(MessageCatalog.GetErrorByCode(21002)).WithErrorCode("21002");
@@ -27,18 +27,18 @@ public class UpdateSignedDocumentsRequestValidator : AbstractValidator<UpdateSig
             .NotEmpty().WithMessage(MessageCatalog.GetErrorByCode(21002)).WithErrorCode("21002");
 
         RuleForEach(x => x.Documents)
-            .SetValidator(new SignedDocumentRequestValidator());
+            .SetValidator(new ProviderDocumentRequestValidator());
     }
 }
 
-public class SignedDocumentRequestValidator : AbstractValidator<SignedDocumentRequest>
+public class ProviderDocumentRequestValidator : AbstractValidator<ProviderDocumentRequest>
 {
-    public SignedDocumentRequestValidator()
+    public ProviderDocumentRequestValidator()
     {
         RuleFor(x => x.Name)
             .NotEmpty().WithMessage(MessageCatalog.GetErrorByCode(21002)).WithErrorCode("21002");
 
-        RuleFor(x => x.S3KeyFirmado)
+        RuleFor(x => x.ProviderKeyFirmado)
             .NotEmpty().WithMessage(MessageCatalog.GetErrorByCode(21002)).WithErrorCode("21002");
     }
 }

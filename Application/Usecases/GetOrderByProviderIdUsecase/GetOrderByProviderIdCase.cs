@@ -1,4 +1,5 @@
-using Application.Adapters;
+using Application.Adapters.Common;
+using Application.Adapters.SignatureContracts;
 using Application.Internals.Executors;
 using Application.Ports;
 using Domain.Interfaces;

@@ -1,12 +1,16 @@
 using Domain.Catalogs;
 using FluentValidation;
 using Microsoft.AspNetCore.Mvc;
-namespace Application.Adapters;
+namespace Application.Adapters.Common;
 
 public class SignatureHeaderRequest
 {
     [FromHeader(Name = "MessageIdentification")]
     public string? MessageIdentification { get; set; }
+
+    [FromHeader(Name = "ChannelIdentification")]
+    public string? Channel { get; set; }
+
 }
 
 public class SignatureHeaderRequestValidator : AbstractValidator<SignatureHeaderRequest>

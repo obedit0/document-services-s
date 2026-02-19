@@ -1,4 +1,5 @@
 using System.Text.Json.Serialization;
+using Domain.Entities.Client;
 
 namespace Domain.Entities.SignatureContracts;
 
@@ -49,6 +50,7 @@ public class KeynuaFlagsRequest
     [JsonPropertyName("PDFData")]
     public required KeynuaPDFDataRequest PDFData { get; set; }
     public required List<string> ChosenNotificationOptions { get; set; }
+    public KeynuaCavaliDataRequest? CavaliData { get; set; }
 }
 
 public class KeynuaRemindersDataRequest
@@ -59,4 +61,18 @@ public class KeynuaRemindersDataRequest
 public class KeynuaPDFDataRequest
 {
     public required bool AddSignatureOnAllDocs { get; set; }
+}
+
+public class KeynuaCavaliDataRequest
+{
+    public NaturalClientEntity? Client { get; set; }
+    public List<NaturalClientEntity>? Representatives { get; set; }
+    public List<NaturalClientEntity>? Guarantees { get; set; }
+    public int? UniqueCode { get; set; }
+    public string? ClientName { get; set; }
+    public string? Domicile { get; set; }
+    public string? IssuedDate { get; set; }
+    public string? Banking { get; set; }
+    public string? Product { get; set; }
+    public int? CreditNumber { get; set; }
 }
