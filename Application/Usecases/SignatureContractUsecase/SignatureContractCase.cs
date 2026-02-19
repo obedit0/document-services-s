@@ -52,7 +52,7 @@ public class SignatureContractCase : ISignatureContractPort
             var count = await _repository.GetCountByKeywordAndChannelAsync(request.Keyword!, (int)canal);
             ordenFirma.CreditNumber = int.Parse(((int)canal).ToString() + request.Keyword!.ToString() + count.ToString());
         }
-        ordenFirma.IdOrdenProveedor = "lsakdjf";//await _keynuaClient.CreateContractAsync(ordenFirma, ct);
+        ordenFirma.IdOrdenProveedor = await _keynuaClient.CreateContractAsync(ordenFirma, ct);
         ordenFirma.IdFirma = await _repository.InsertAsync(ordenFirma, ct);
 
         return EasyResult<CreateSignatureContractResponse>.Success(MapToResponse(ordenFirma));
@@ -89,11 +89,11 @@ public class SignatureContractCase : ISignatureContractPort
 
         var docCount = request.Documentos.Count;
         if (docCount > upload.MaxDocuments)
-            return Error("21022", $"Documentos ({docCount}) excede límite ({upload.MaxDocuments})", "Documentos");
+            return Error("21022", $"Documentos ({docCount}) excede lï¿½mite ({upload.MaxDocuments})", "Documentos");
 
         var totalBytes = request.Documentos.Sum(d => d.Size);
         if (totalBytes > upload.MaxTotalBytes)
-            return Error("21024", $"Tamaño ({totalBytes / 1048576} MB) excede límite ({upload.MaxTotalBytes / 1048576} MB)", "Documentos");
+            return Error("21024", $"Tamaï¿½o ({totalBytes / 1048576} MB) excede lï¿½mite ({upload.MaxTotalBytes / 1048576} MB)", "Documentos");
 
         return null;
     }
