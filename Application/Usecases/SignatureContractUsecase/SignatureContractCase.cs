@@ -52,7 +52,7 @@ public class SignatureContractCase : ISignatureContractPort
             var count = await _repository.GetCountByKeywordAndChannelAsync(request.Keyword!, (int)canal);
             ordenFirma.CreditNumber = int.Parse(((int)canal).ToString() + request.Keyword!.ToString() + count.ToString());
         }
-        ordenFirma.IdOrdenProveedor = "await _keynuaClient.CreateContractAsync(ordenFirma, ct)";
+        ordenFirma.IdOrdenProveedor = await _keynuaClient.CreateContractAsync(ordenFirma, ct);
         ordenFirma.IdFirma = await _repository.InsertAsync(ordenFirma, ct);
 
         return EasyResult<CreateSignatureContractResponse>.Success(MapToResponse(ordenFirma));
