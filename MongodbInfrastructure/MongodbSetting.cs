@@ -36,5 +36,6 @@ public static class MongodbSetting
         });
 
         services.AddScoped<IOrdenFirmaRepository, MongoOrdenFirmaRepository>();
+        services.AddScoped<IChannelConfigRepository, MongoChannelConfigRepository>();
     }
 }

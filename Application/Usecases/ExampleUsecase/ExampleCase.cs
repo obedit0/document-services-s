@@ -1,4 +1,4 @@
-﻿using Application.Adapters;
+﻿using Application.Adapters.Examples;
 using Application.Internals.Adapters;
 using Application.Internals.Executors;
 using Application.Ports;

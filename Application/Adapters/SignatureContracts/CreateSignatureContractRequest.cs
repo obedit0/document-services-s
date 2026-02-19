@@ -2,7 +2,7 @@ using Domain.Catalogs;
 using FluentValidation;
 using FluentValidation.Results;
 
-namespace Application.Adapters;
+namespace Application.Adapters.SignatureContracts;
 
 public class CreateSignatureContractRequest
 {
@@ -10,11 +10,11 @@ public class CreateSignatureContractRequest
     public string? Keyword { get; set; }
     public string? Titulo { get; set; }
     public string? Descripcion { get; set; }
-    public string? Canal { get; set; }
     public DateTime? HoraExpiracion { get; set; }
-    public required List<string> IdTiposNotificacion { get; set; }
+    public List<string>? IdTiposNotificacion { get; set; }
     public bool FirmaEnTodoDocumentos { get; set; }
     public bool Pagare { get; set; }
+    public int? CreditNumber { get; set; }
     public List<DocumentoRequest>? Documentos { get; set; }
     public List<ClienteRequest>? Clientes { get; set; }
     public List<ObservadorRequest>? Observadores { get; set; }
@@ -35,6 +35,7 @@ public class DocumentoRequest
     public string? Name { get; set; }
     public List<string>? OwnerClientId { get; set; }
     public string? S3KeyOriginal { get; set; }
+    public long Size { get; set; }
 }
 
 public class ObservadorRequest
@@ -52,6 +53,12 @@ public class CreateSignatureContractRequestValidator : AbstractValidator<CreateS
             .NotEmpty().WithMessage(MessageCatalog.GetErrorByCode(21002)).WithErrorCode("21002");
         
         RuleFor(x => x.Titulo)
+            .NotEmpty().WithMessage(MessageCatalog.GetErrorByCode(21002)).WithErrorCode("21002");
+
+        RuleFor(x => x.HoraExpiracion)
+            .NotEmpty().WithMessage(MessageCatalog.GetErrorByCode(21002)).WithErrorCode("21002");
+
+        RuleFor(x => x.IdTiposNotificacion)
             .NotEmpty().WithMessage(MessageCatalog.GetErrorByCode(21002)).WithErrorCode("21002");
 
         RuleFor(x => x.Clientes)

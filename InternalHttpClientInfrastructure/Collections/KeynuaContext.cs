@@ -7,4 +7,6 @@ public sealed class KeynuaContext
     public string Authorization { get; set; } = "ZmMwZWExNTYtNGUxNi00OTNiLWFiNjktZTFkNDkxNTg4MjliOmU5YzJkNDQwMDlmMjQ1YWJiOTE5N2ZmMTA0ZTk0YTlhOmNiMzkzZDAwM2JkZWZiM2M2Y2FiNGNiMDY2OTNiMzZjMzMzMzZiMzIzNTRiMDNiMTQ2MGI5ZWQzYzE4YmQ3Nzg";
     public string TemplateId { get; set; } = string.Empty;
     public int ExpirationInHours { get; set; }
+    public string? Banking { get; set; } = "4";
+    public string? Product { get; set; } = "41";
 }

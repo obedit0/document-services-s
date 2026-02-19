@@ -54,7 +54,6 @@ public static class KeynuaSetting
         .HandleTransientHttpError()
         .WaitAndRetryAsync(2, _ => TimeSpan.FromMilliseconds(200)));
         services.Configure<KeynuaContext>(configuration.GetSection("Keynua"));
-        services.AddTransient<HttpClientBuilder>();
         services.AddScoped<IKeynuaContractClient, KeynuaContractClient>();
     }
 }

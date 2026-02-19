@@ -1,4 +1,5 @@
-using Application.Adapters;
+using Application.Adapters.Common;
+using Application.Adapters.UpdateDocuments;
 using Application.Internals.Executors;
 
 namespace Application.Ports;

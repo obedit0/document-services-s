@@ -7,23 +7,25 @@ using InternalHttpClientInfrastructure.Services;
 
 //using InternalHttpClientBuilder;
 using Microsoft.Extensions.Logging;
+using System.Net.Http;
 
 namespace FakeApiInfrastructure.Queries;
 
 public class FakeApiQueryInfra : IExampleTitleQuery
 {
-    private readonly HttpClientBuilder _httpClient;
+    private readonly IHttpClientFactory _httpClientFactory;
     private readonly ILogger<FakeApiQueryInfra> _logger;
 
-    public FakeApiQueryInfra(HttpClientBuilder httpClient, ILogger<FakeApiQueryInfra> logger)
+    public FakeApiQueryInfra(IHttpClientFactory httpClientFactory, ILogger<FakeApiQueryInfra> logger)
     {
-        _httpClient = httpClient;
+        _httpClientFactory = httpClientFactory;
         _logger = logger;
     }
 
     async public Task<ExampleTitleEntity> GetAsync(int value = 1, CancellationToken ct = default)
     {
-        var response = await _httpClient.WithBaseUrl("https://jsonplaceholder.typicode.com")
+        var httpClient = new HttpClientBuilder(_httpClientFactory, _logger);
+        var response = await httpClient.WithBaseUrl("https://jsonplaceholder.typicode.com")
             .WithEndpoint($"todos/{value}")
             .GetAsync<ApiExampleCollection>(ct);
 
@@ -38,7 +40,8 @@ public class FakeApiQueryInfra : IExampleTitleQuery
 
     async public Task<ExampleTitleEntity> GetProductAsync(int value = 1, CancellationToken ct = default)
     {
-        var response = await _httpClient.WithBaseUrl("https://fakestoreapi.com")
+        var httpClient = new HttpClientBuilder(_httpClientFactory, _logger);
+        var response = await httpClient.WithBaseUrl("https://fakestoreapi.com")
             .WithEndpoint($"products/{value}")
             .GetAsync<ApiExampleTwoCollection>(ct);
 
