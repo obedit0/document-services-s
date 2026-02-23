@@ -1,41 +1,95 @@
 using Domain.Interfaces;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Options;
 using MongoDB.Driver;
 using MongodbInfrastructure.Repositories;
-
+using Domain.Commons;
 namespace MongodbInfrastructure;
 
 public static class MongodbSetting
 {
-    public static void AddMongodbInfrastructure(this IServiceCollection services, IConfiguration configuration)
+    public static void AddMongodbInfrastructure(this IServiceCollection services,IConfiguration configuration,bool isDevelopment)
     {
-        services.Configure<MongodbOptions>(configuration.GetSection("ConnectionString"));
+        var mongoConfig = ResolveMongoConfig(configuration, isDevelopment);
+
+        services.AddSingleton(mongoConfig);
 
         services.AddSingleton<IMongoClient>(sp =>
-        {
-            string conn = "mongodb://arodriguezf:Dev12345@10.5.81.16:27017/";
-            
-            var settings = MongoClientSettings.FromConnectionString(conn);
-            settings.ApplicationName = "app-customer-credit-rating-s";
-            settings.RetryReads = true;
-            settings.ReadPreference = ReadPreference.SecondaryPreferred;
-            settings.WriteConcern = WriteConcern.WMajority;
-            settings.ServerSelectionTimeout = TimeSpan.FromSeconds(5);
-            settings.ConnectTimeout = TimeSpan.FromSeconds(5);
-            settings.SocketTimeout = TimeSpan.FromSeconds(5);
-
-            return new MongoClient(settings);
-        });
+            BuildMongoClient(sp.GetRequiredService<MongoConnectionConfig>()));
 
         services.AddSingleton<IMongoDatabase>(sp =>
         {
-            var options = sp.GetRequiredService<IOptions<MongodbOptions>>().Value;
-            return sp.GetRequiredService<IMongoClient>().GetDatabase("DB_PruebasObesito");
+            var cfg = sp.GetRequiredService<MongoConnectionConfig>();
+            return sp.GetRequiredService<IMongoClient>().GetDatabase(cfg.DatabaseName);
         });
 
         services.AddScoped<IOrdenFirmaRepository, MongoOrdenFirmaRepository>();
         services.AddScoped<IChannelConfigRepository, MongoChannelConfigRepository>();
     }
+
+    private static IMongoClient BuildMongoClient(MongoConnectionConfig cfg)
+    {
+        if (string.IsNullOrWhiteSpace(cfg.DatabaseName))
+            throw new InvalidOperationException("MongoDB database name is not configured.");
+
+        var scheme = "mongodb://";
+        var server = cfg.Server;
+        var user = Uri.EscapeDataString(cfg.User);
+        var password = Uri.EscapeDataString(cfg.Password);
+
+        var conn = $"{scheme}{user}:{password}@{server}/{cfg.DatabaseName}";
+
+        var settings = MongoClientSettings.FromConnectionString(conn);
+        settings.ApplicationName = "document-services-s";
+        settings.RetryReads = true;
+        settings.ReadPreference = ReadPreference.SecondaryPreferred;
+        settings.WriteConcern = WriteConcern.WMajority;
+        settings.ServerSelectionTimeout = TimeSpan.FromSeconds(5);
+        settings.ConnectTimeout = TimeSpan.FromSeconds(15);
+        settings.SocketTimeout = TimeSpan.FromSeconds(10);
+
+        return new MongoClient(settings);
+    }
+
+    private static MongoConnectionConfig ResolveMongoConfig(IConfiguration configuration, bool isDevelopment)
+    {
+        return isDevelopment
+            ? ReadFromAppSettings(configuration)
+            : ReadFromEnvironment();
+    }
+
+    private static MongoConnectionConfig ReadFromAppSettings(IConfiguration configuration)
+    {
+        var section = configuration.GetSection("MongoStoreDatabase");
+
+        string GetCfg(string key) =>
+            section[key] ?? throw new InvalidOperationException(
+                $"La clave de configuración 'MongoStoreDatabase:{key}' no está definida.");
+
+        return new MongoConnectionConfig(
+            Server: GetCfg("MONGO_DB_SERVER"),
+            DatabaseName: GetCfg("MONGO_DB_NAME"),
+            User: CryptoCommon.decryptString(GetCfg("MONGO_DB_USER")),
+            Password: CryptoCommon.decryptString(GetCfg("MONGO_DB_PASSWD")));
+    }
+
+    private static MongoConnectionConfig ReadFromEnvironment()
+    {
+        string GetEnv(string name) =>
+            Environment.GetEnvironmentVariable(name)
+            ?? throw new InvalidOperationException(
+                $"La variable de entorno '{name}' no esta definida.");
+
+        return new MongoConnectionConfig(
+            Server: GetEnv("MONGO_DB_SERVER"),
+            DatabaseName: GetEnv("MONGO_DB_NAME"),
+            User: CryptoCommon.decryptString(GetEnv("MONGO_DB_USER")),
+            Password: CryptoCommon.decryptString(GetEnv("MONGO_DB_PASSWD")));
+    }
+
+    private sealed record MongoConnectionConfig(
+        string Server,
+        string DatabaseName,
+        string User,
+        string Password);
 }

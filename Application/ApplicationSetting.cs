@@ -1,13 +1,11 @@
 using Application.Ports;
 using Application.Usecases.ErrorUsecase;
 using Application.Usecases.ExampleUsecase;
-using Application.Usecases.GetOrderByProviderIdUsecase;
-using Application.Usecases.SignatureStatusUsecase;
+using Application.Usecases.Signature.Get;
 using Application.Usecases.MicroserviceCallTraceUsecase;
-using Application.Usecases.SignatureContractUsecase;
+using Application.Usecases.Signature.Post;
 using Application.Usecases.SqsUsecase;
-using Application.Usecases.UpdateProviderDocumentsUsecase;
-using Application.Usecases.UpdateSignedDocumentsUsecase;
+using Application.Usecases.Signature.Put;
 using Domain.Containers.MemoryEvent;
 using AwsSqsInfrastructure;
 using FakeApiInfrastructure;
@@ -42,19 +40,19 @@ public static class ApplicationSetting
 
         // Added Infrstrutures
         services.AddFakeApiInfrastructure();
-        services.AddKeynuaInfrastructure(configuration,isDevelopment);
-        services.AddMongodbInfrastructure(configuration);
-        services.AddAwsSqsInfrastructure(configuration);
+        services.AddKeynuaInfrastructure(configuration, isDevelopment);
+        services.AddMongodbInfrastructure(configuration, isDevelopment);
+        services.AddAwsSqsInfrastructure(configuration, isDevelopment);
 
         //Dependency inyection        
         services.AddTransient<IExamplePort, ExampleCase>();
         services.AddTransient<ISignatureContractPort, SignatureContractCase>();
-        services.AddTransient<IUpdateSignedDocumentsPort, UpdateSignedDocumentsCase>();
-        services.AddTransient<IUpdateProviderDocumentsPort, UpdateProviderDocumentsCase>();
-        services.AddTransient<IGetOrderByProviderIdPort, GetOrderByProviderIdCase>();
+        services.AddTransient<IUpdateSignedDocumentsPort, SignedDocumentsCase>();
+        services.AddTransient<IUpdateProviderDocumentsPort, ProviderDocumentsCase>();
+        services.AddTransient<IGetOrderByProviderIdPort, OrderByProviderIdCase>();
         services.AddTransient<IErrorInternalPort, ErrorInternalCase>();
-        services.AddTransient<IGetSignatureStatusPort, GetSignatureStatusCase>();
+        services.AddTransient<IGetSignatureStatusPort, SignatureStatusCase>();
         services.AddTransient<IMicroserviceCallTracePort, MicroserviceCallTraceSqsCase>();
-        services.AddTransient<ISqsTestPort, SqsSendTestCase>();
+        services.AddTransient<ISqsTestPort, SqsTestCase>();
     }
 }

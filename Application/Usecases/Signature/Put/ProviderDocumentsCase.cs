@@ -6,13 +6,13 @@ using Domain.Entities.SignatureContracts;
 using Domain.Enums;
 using Domain.Interfaces;
 
-namespace Application.Usecases.UpdateProviderDocumentsUsecase;
+namespace Application.Usecases.Signature.Put;
 
-public class UpdateProviderDocumentsCase : IUpdateProviderDocumentsPort
+public class ProviderDocumentsCase : IUpdateProviderDocumentsPort
 {
     private readonly IOrdenFirmaRepository _repository;
 
-    public UpdateProviderDocumentsCase(IOrdenFirmaRepository repository)
+    public ProviderDocumentsCase(IOrdenFirmaRepository repository)
     {
         _repository = repository;
     }

@@ -8,11 +8,11 @@ using Domain.Interfaces;
 
 namespace Application.Usecases.SqsUsecase;
 
-public class SqsSendTestCase : ISqsTestPort
+public class SqsTestCase : ISqsTestPort
 {
     private readonly ISqsMessagePublisher _publisher;
 
-    public SqsSendTestCase(ISqsMessagePublisher publisher)
+    public SqsTestCase(ISqsMessagePublisher publisher)
     {
         _publisher = publisher;
     }

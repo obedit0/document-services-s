@@ -4,13 +4,13 @@ using Application.Internals.Executors;
 using Application.Ports;
 using Domain.Interfaces;
 
-namespace Application.Usecases.GetOrderByProviderIdUsecase;
+namespace Application.Usecases.Signature.Get;
 
-public class GetOrderByProviderIdCase : IGetOrderByProviderIdPort
+public class OrderByProviderIdCase : IGetOrderByProviderIdPort
 {
     private readonly IOrdenFirmaRepository _repository;
 
-    public GetOrderByProviderIdCase(IOrdenFirmaRepository repository)
+    public OrderByProviderIdCase(IOrdenFirmaRepository repository)
     {
         _repository = repository;
     }

@@ -1,4 +1,5 @@
 using Domain.Containers.MemoryEvent;
+using Domain.Exceptions;
 using Domain.Entities.Client;
 using Domain.Entities.SignatureContracts;
 using Domain.Enums;
@@ -14,6 +15,11 @@ namespace InternalHttpClientInfrastructure.Queries;
 
 public sealed class KeynuaContractClient : IKeynuaContractClient
 {
+    private const int KeynuaErrorStatus = 502;
+    private const string KeynuaErrorCode = "21098";
+    private const int InvalidRequestStatus = 400;
+    private const string InvalidRequestCode = "21002";
+
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly MicroserviceCallMemoryQueue _memQueue;
     private readonly ILogger<KeynuaContractClient> _logger;
@@ -47,11 +53,11 @@ public sealed class KeynuaContractClient : IKeynuaContractClient
 
         if (!response.IsSuccess || response.Content is null)
         {
-            throw new ArgumentException("Error con la peticion a Keynua");
+            throw new ServerErrorException(KeynuaErrorStatus, KeynuaErrorCode, "Error con la peticion a Keynua");
         }
         if (string.IsNullOrWhiteSpace(response.Content.Id))
         {
-            throw new ArgumentException("Error con la peticion a Keynua: respuesta sin Id");
+            throw new ServerErrorException(KeynuaErrorStatus, KeynuaErrorCode, "Error con la peticion a Keynua: respuesta sin Id");
         }
 
         return response.Content.Id;
@@ -63,8 +69,15 @@ public sealed class KeynuaContractClient : IKeynuaContractClient
         string messageIdentity,
         CancellationToken ct = default)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(idContract);
-        ArgumentException.ThrowIfNullOrWhiteSpace(messageIdentity);
+        if (string.IsNullOrWhiteSpace(idContract))
+        {
+            throw new ClientErrorException(InvalidRequestStatus, InvalidRequestCode, $"Cannot be empty: {nameof(idContract)}");
+        }
+
+        if (string.IsNullOrWhiteSpace(messageIdentity))
+        {
+            throw new ClientErrorException(InvalidRequestStatus, InvalidRequestCode, $"Cannot be empty: {nameof(messageIdentity)}");
+        }
 
         var httpClient = new HttpClientBuilder(_httpClientFactory, _logger);
         var response = await httpClient
@@ -77,7 +90,7 @@ public sealed class KeynuaContractClient : IKeynuaContractClient
 
         if (!response.IsSuccess || response.Content is null)
         {
-            throw new ArgumentException("Error con la peticion a Keynua: estado de contrato");
+            throw new ServerErrorException(KeynuaErrorStatus, KeynuaErrorCode, "Error con la peticion a Keynua: estado de contrato");
         }
 
         return response.Content.Status;
@@ -156,7 +169,7 @@ public sealed class KeynuaContractClient : IKeynuaContractClient
         {
             Title = orden.Titulo,
             Description = orden.Descripcion,
-            Reference = orden.Referencia,
+            Reference = orden.Keyword,
             Documents = documents,
             TemplateId = orden.Pagare ? "dnice-cavali" : "andes-peru-dni",
             ExpirationDatetime = expirationDatetime.ToString("yyyy-MM-ddTHH:mm:ss.fffZ"),

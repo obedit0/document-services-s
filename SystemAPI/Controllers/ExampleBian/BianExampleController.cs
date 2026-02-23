@@ -2,8 +2,8 @@
 using Application.Ports;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using System.Text.RegularExpressions;
 using System.Threading;
+using SystemAPI.Attributes;
 using SystemAPI.Handlers.ArifyAuthorizer;
 using SystemAPI.Helpers;
 
@@ -11,6 +11,7 @@ namespace SystemAPI.Controllers.ExampleBian;
 
 [Route("service-domain-s/v1/example2-behavior-qualifier")]
 [ApiController]
+[BianResponse]
 public class BianExampleController : ControllerBase
 {
     private readonly IExamplePort _exampleUsecase;
@@ -37,36 +38,21 @@ public class BianExampleController : ControllerBase
             MessageIdentifier = messageIdentifier
         };
 
-        try
+        var result = await _exampleUsecase.ShowExampleAsync(headers, ct);
+
+        if (!result.IsSuccess)
         {
-            var result = await _exampleUsecase.ShowExampleAsync(headers, ct);
-
-            if (!result.IsSuccess)
-            {
-                _logger.LogWarning("TraceId=[{Headers}] Validation=[{ValidationErrors}]", LoggerMapperHelper.ToString(headers), LoggerMapperHelper.ToString(result.ValidationValues.FirstOrDefault()!));                
-                return StatusCode(result.Status, EasyBianResponseHelper.WarningResponse(result.ValidationValues));                
-            }
-
-            if (result.Status == 204)
-            {
-                _logger.LogWarning("TraceId=[{Headers}]", LoggerMapperHelper.ToString(headers));
-                return NoContent();
-            }
-
-            return Ok(EasyBianResponseHelper.SuccessResponse(result.SuccessValue!));
+            _logger.LogWarning("TraceId=[{Headers}] Validation=[{ValidationErrors}]", LoggerMapperHelper.ToString(headers), LoggerMapperHelper.ToString(result.ValidationValues.FirstOrDefault()!));                
+            return StatusCode(result.Status, EasyBianResponseHelper.WarningResponse(result.ValidationValues));                
         }
-        catch (OperationCanceledException) when (ct.IsCancellationRequested)
+
+        if (result.Status == 204)
         {
-            _logger.LogWarning("Operation cancelled by client TraceId=[{Headers}]", LoggerMapperHelper.ToString(headers));
-            return StatusCode(499, EasyBianResponseHelper.ErrorResponse("499", "Client Closed Request"));
+            _logger.LogWarning("TraceId=[{Headers}]", LoggerMapperHelper.ToString(headers));
+            return NoContent();
         }
-        catch (Exception ex)
-        {
-            var tracer = Regex.Replace(ex.StackTrace ?? "", @"\sat\s(.*?)\sin\s", string.Empty).Trim();
-            _logger.LogError("Message=[{Message}] TraceId=[{Headers}] StackTrace={Trace}", ex.Message, LoggerMapperHelper.ToString(headers), tracer);
 
-            return StatusCode(500, EasyBianResponseHelper.ErrorResponse());
-        }
+        return Ok(EasyBianResponseHelper.SuccessResponse(result.SuccessValue!));
     }
 
     [Authorize(Policy = "ReadScope")] // validate by JWT claim
@@ -85,36 +71,21 @@ public class BianExampleController : ControllerBase
             MessageIdentifier = messageIdentifier
         };
 
-        try
+        var result = await _exampleUsecase.ExecuteExampleTwoAsync(headers, ct);
+
+        if (!result.IsSuccess)
         {
-            var result = await _exampleUsecase.ExecuteExampleTwoAsync(headers);
-
-            if (!result.IsSuccess)
-            {
-                _logger.LogWarning("TraceId=[{Headers}] Validation=[{ValidationErrors}]", LoggerMapperHelper.ToString(headers), LoggerMapperHelper.ToString(result.ValidationValues.FirstOrDefault()!));                
-                return StatusCode(result.Status, EasyBianResponseHelper.WarningResponse(result.ValidationValues));                
-            }
-
-            if (result.Status == 204)
-            {
-                _logger.LogWarning("TraceId=[{Headers}]", LoggerMapperHelper.ToString(headers));
-                return NoContent();
-            }
-
-            return Ok(EasyBianResponseHelper.SuccessResponse(result.SuccessValue!));
+            _logger.LogWarning("TraceId=[{Headers}] Validation=[{ValidationErrors}]", LoggerMapperHelper.ToString(headers), LoggerMapperHelper.ToString(result.ValidationValues.FirstOrDefault()!));                
+            return StatusCode(result.Status, EasyBianResponseHelper.WarningResponse(result.ValidationValues));                
         }
-        catch (OperationCanceledException) when (ct.IsCancellationRequested)
+
+        if (result.Status == 204)
         {
-            _logger.LogWarning("Operation cancelled by client TraceId=[{Headers}]", LoggerMapperHelper.ToString(headers));
-            return StatusCode(499, EasyBianResponseHelper.ErrorResponse("499", "Client Closed Request"));
+            _logger.LogWarning("TraceId=[{Headers}]", LoggerMapperHelper.ToString(headers));
+            return NoContent();
         }
-        catch (Exception ex)
-        {
-            var tracer = Regex.Replace(ex.StackTrace ?? "", @"\sat\s(.*?)\sin\s", string.Empty).Trim();
-            _logger.LogError("Message=[{Message}] TraceId=[{Headers}] StackTrace={Trace}", ex.Message, LoggerMapperHelper.ToString(headers), tracer);
 
-            return StatusCode(500, EasyBianResponseHelper.ErrorResponse());
-        }
+        return Ok(EasyBianResponseHelper.SuccessResponse(result.SuccessValue!));
     }
 
     [ArifyAuthorize("WriteExample")] // Validate Scope by x-scope HEADER  
@@ -134,35 +105,20 @@ public class BianExampleController : ControllerBase
             MessageIdentifier = messageIdentifier
         };
 
-        try
+        var result = await _exampleUsecase.ShowExampleAsync(headers, ct);
+
+        if (!result.IsSuccess)
         {
-            var result = await _exampleUsecase.ShowExampleAsync(headers);
-
-            if (!result.IsSuccess)
-            {
-                _logger.LogWarning("TraceId=[{Headers}] Validation=[{ValidationErrors}]", LoggerMapperHelper.ToString(headers), LoggerMapperHelper.ToString(result.ValidationValues.FirstOrDefault()!));
-                return StatusCode(result.Status, EasyBianResponseHelper.WarningResponse(result.ValidationValues));
-            }
-
-            if (result.Status == 204)
-            {
-                _logger.LogWarning("TraceId=[{Headers}]", LoggerMapperHelper.ToString(headers));
-                return NoContent();
-            }
-
-            return Ok(EasyBianResponseHelper.SuccessResponse(result.SuccessValue!));
+            _logger.LogWarning("TraceId=[{Headers}] Validation=[{ValidationErrors}]", LoggerMapperHelper.ToString(headers), LoggerMapperHelper.ToString(result.ValidationValues.FirstOrDefault()!));
+            return StatusCode(result.Status, EasyBianResponseHelper.WarningResponse(result.ValidationValues));
         }
-        catch (OperationCanceledException) when (ct.IsCancellationRequested)
+
+        if (result.Status == 204)
         {
-            _logger.LogWarning("Operation cancelled by client TraceId=[{Headers}]", LoggerMapperHelper.ToString(headers));
-            return StatusCode(499);
+            _logger.LogWarning("TraceId=[{Headers}]", LoggerMapperHelper.ToString(headers));
+            return NoContent();
         }
-        catch (Exception ex)
-        {
-            var tracer = Regex.Replace(ex.StackTrace ?? "", @"\sat\s(.*?)\sin\s", string.Empty).Trim();
-            _logger.LogError("Message=[{Message}] TraceId=[{Headers}] StackTrace={Trace}", ex.Message, LoggerMapperHelper.ToString(headers), tracer);
 
-            return StatusCode(500, EasyBianResponseHelper.ErrorResponse());
-        }
+        return Ok(EasyBianResponseHelper.SuccessResponse(result.SuccessValue!));
     }
 }

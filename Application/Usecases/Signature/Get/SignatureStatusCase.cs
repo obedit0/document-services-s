@@ -6,14 +6,14 @@ using Domain.Entities.Client;
 using Domain.Enums;
 using Domain.Interfaces;
 
-namespace Application.Usecases.SignatureStatusUsecase;
+namespace Application.Usecases.Signature.Get;
 
-public sealed class GetSignatureStatusCase : IGetSignatureStatusPort
+public sealed class SignatureStatusCase : IGetSignatureStatusPort
 {
     private readonly IOrdenFirmaRepository _repository;
     private readonly IKeynuaContractClient _keynuaClient;
 
-    public GetSignatureStatusCase(IOrdenFirmaRepository repository, IKeynuaContractClient keynuaClient)
+    public SignatureStatusCase(IOrdenFirmaRepository repository, IKeynuaContractClient keynuaClient)
     {
         _repository = repository;
         _keynuaClient = keynuaClient;

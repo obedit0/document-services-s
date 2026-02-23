@@ -10,9 +10,11 @@ namespace AwsSqsInfrastructure;
 
 public static class AwsSqsSetting
 {
-    public static void AddAwsSqsInfrastructure(this IServiceCollection services, IConfiguration configuration)
+    public static void AddAwsSqsInfrastructure(this IServiceCollection services, IConfiguration configuration, bool isDevelopment)
     {
-        services.Configure<AwsSqsOptions>(configuration.GetSection("AwsSqs"));
+        var awsOptions = BuildAwsSqsOptions(configuration, isDevelopment);
+        services.AddSingleton(awsOptions);
+        services.AddSingleton<IOptions<AwsSqsOptions>>(Options.Create(awsOptions));
 
         services.AddSingleton<IAmazonSQS>(sp =>
         {
@@ -61,5 +63,38 @@ public static class AwsSqsSetting
 
         services.AddHealthChecks()
             .AddCheck<AwsSqsHealthCheck>("aws-sqs", tags: new[] { "ready" });
+    }
+
+    private static AwsSqsOptions BuildAwsSqsOptions(IConfiguration configuration, bool isDevelopment)
+    {
+        var options = new AwsSqsOptions();
+
+        if (isDevelopment)
+        {
+            options.Region = configuration["AwsSqs:Region"];
+            options.ServiceUrl = configuration["AwsSqs:ServiceUrl"];
+            options.ProfileName = configuration["AwsSqs:ProfileName"];
+            options.AccessKey = configuration["AwsSqs:AccessKey"];
+            options.SecretKey = configuration["AwsSqs:SecretKey"];
+            options.QueueUrl = configuration["AwsSqs:QueueUrl"];
+            options.MessageGroupId = configuration["AwsSqs:MessageGroupId"];
+            options.MessageDeduplicationId = configuration["AwsSqs:MessageDeduplicationId"];
+            return options;
+        }
+
+        string GetEnv(string name) =>
+            Environment.GetEnvironmentVariable(name)
+            ?? throw new InvalidOperationException($"La variable de entorno '{name}' no esta definida.");
+
+        options.Region = GetEnv("AWS_SQS_REGION");
+        options.ServiceUrl = GetEnv("AWS_SQS_SERVICE_URL");
+        options.ProfileName = GetEnv("AWS_SQS_PROFILE_NAME");
+        options.AccessKey = GetEnv("AWS_SQS_ACCESS_KEY");
+        options.SecretKey = GetEnv("AWS_SQS_SECRET_KEY");
+        options.QueueUrl = GetEnv("AWS_SQS_QUEUE_URL");
+        options.MessageGroupId = GetEnv("AWS_SQS_MESSAGE_GROUP_ID");
+        options.MessageDeduplicationId = GetEnv("AWS_SQS_MESSAGE_DEDUPLICATION_ID");
+
+        return options;
     }
 }

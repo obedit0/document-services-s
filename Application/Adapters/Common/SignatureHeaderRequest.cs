@@ -5,10 +5,10 @@ namespace Application.Adapters.Common;
 
 public class SignatureHeaderRequest
 {
-    [FromHeader(Name = "MessageIdentification")]
+    [FromHeader(Name = "messageIdentification")]
     public string? MessageIdentification { get; set; }
 
-    [FromHeader(Name = "ChannelIdentification")]
+    [FromHeader(Name = "channelIdentification")]
     public string? Channel { get; set; }
 
 }

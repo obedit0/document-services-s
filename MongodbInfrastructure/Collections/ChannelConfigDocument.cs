@@ -20,6 +20,9 @@ public class ChannelConfigDocument
     [BsonElement("documentsUpload")]
     public DocumentsUploadDocument? DocumentsUpload { get; set; }
 
+    [BsonElement("uploadTimeWindow")]
+    public UploadTimeWindowDocument? UploadTimeWindow { get; set; }
+
     [BsonElement("version")]
     public int Version { get; set; }
 
@@ -33,6 +36,7 @@ public class ChannelConfigDocument
             IdCanal = IdCanal,
             Enabled = Enabled,
             DocumentsUpload = DocumentsUpload?.ToDomain(),
+            UploadTimeWindow = UploadTimeWindow?.ToDomain() ?? DocumentsUpload?.LegacyAllowedWindow?.ToDomain(),
             Version = Version,
             UpdatedAt = UpdatedAt
         };
@@ -47,6 +51,9 @@ public class ChannelConfigDocument
             DocumentsUpload = entity.DocumentsUpload != null 
                 ? DocumentsUploadDocument.FromDomain(entity.DocumentsUpload) 
                 : null,
+            UploadTimeWindow = entity.UploadTimeWindow != null
+                ? UploadTimeWindowDocument.FromDomain(entity.UploadTimeWindow)
+                : null,
             Version = entity.Version,
             UpdatedAt = entity.UpdatedAt
         };
@@ -57,7 +64,7 @@ public class ChannelConfigDocument
 public class DocumentsUploadDocument
 {
     [BsonElement("allowedWindow")]
-    public AllowedWindowDocument? AllowedWindow { get; set; }
+    public UploadTimeWindowDocument? LegacyAllowedWindow { get; set; }
 
     [BsonElement("maxTotalBytes")]
     public long MaxTotalBytes { get; set; }
@@ -69,7 +76,6 @@ public class DocumentsUploadDocument
     {
         return new DocumentsUploadConfig
         {
-            AllowedWindow = AllowedWindow?.ToDomain(),
             MaxTotalBytes = MaxTotalBytes,
             MaxDocuments = MaxDocuments
         };
@@ -79,9 +85,6 @@ public class DocumentsUploadDocument
     {
         return new DocumentsUploadDocument
         {
-            AllowedWindow = config.AllowedWindow != null 
-                ? AllowedWindowDocument.FromDomain(config.AllowedWindow) 
-                : null,
             MaxTotalBytes = config.MaxTotalBytes,
             MaxDocuments = config.MaxDocuments
         };
@@ -89,7 +92,7 @@ public class DocumentsUploadDocument
 }
 
 [BsonIgnoreExtraElements]
-public class AllowedWindowDocument
+public class UploadTimeWindowDocument
 {
     [BsonElement("fromMin")]
     public int FromMin { get; set; }
@@ -97,18 +100,18 @@ public class AllowedWindowDocument
     [BsonElement("toMin")]
     public int ToMin { get; set; }
 
-    public AllowedWindowConfig ToDomain()
+    public UploadTimeWindowConfig ToDomain()
     {
-        return new AllowedWindowConfig
+        return new UploadTimeWindowConfig
         {
             FromMin = FromMin,
             ToMin = ToMin
         };
     }
 
-    public static AllowedWindowDocument FromDomain(AllowedWindowConfig config)
+    public static UploadTimeWindowDocument FromDomain(UploadTimeWindowConfig config)
     {
-        return new AllowedWindowDocument
+        return new UploadTimeWindowDocument
         {
             FromMin = config.FromMin,
             ToMin = config.ToMin

@@ -4,6 +4,7 @@ using InternalHttpClientInfrastructure.Queries;
 using InternalHttpClientInfrastructure.Services;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 using Polly;
 using Polly.Extensions.Http;
 using System.Net;
@@ -27,6 +28,9 @@ public static class KeynuaSetting
 {
     public static void AddKeynuaInfrastructure(this IServiceCollection services, IConfiguration configuration, bool isDevelopment)
     {
+        var keynuaOptions = BuildKeynuaOptions(configuration, isDevelopment);
+        services.AddSingleton<IOptions<KeynuaContext>>(Options.Create(keynuaOptions));
+
         services.AddHttpClient("ArifyClient", client =>
         {
             client.Timeout = TimeSpan.FromSeconds(25);
@@ -53,7 +57,53 @@ public static class KeynuaSetting
         .AddPolicyHandler(HttpPolicyExtensions
         .HandleTransientHttpError()
         .WaitAndRetryAsync(2, _ => TimeSpan.FromMilliseconds(200)));
-        services.Configure<KeynuaContext>(configuration.GetSection("Keynua"));
         services.AddScoped<IKeynuaContractClient, KeynuaContractClient>();
+    }
+
+    private static KeynuaContext BuildKeynuaOptions(IConfiguration configuration, bool isDevelopment)
+    {
+        var options = new KeynuaContext();
+
+        if (isDevelopment)
+        {
+            options.BaseUrl = configuration["Keynua:BaseUrl"] ?? options.BaseUrl;
+            options.ApiKey = configuration["Keynua:ApiKey"] ?? options.ApiKey;
+            options.Authorization = configuration["Keynua:Authorization"] ?? options.Authorization;
+            options.TemplateId = configuration["Keynua:TemplateId"] ?? options.TemplateId;
+            options.Banking = configuration["Keynua:Banking"] ?? options.Banking;
+            options.Product = configuration["Keynua:Product"] ?? options.Product;
+
+            if (int.TryParse(configuration["Keynua:ExpirationInHours"], out var expiration))
+            {
+                options.ExpirationInHours = expiration;
+            }
+
+            return options;
+        }
+
+        string GetEnv(string name) =>
+            Environment.GetEnvironmentVariable(name)
+            ?? throw new InvalidOperationException($"La variable de entorno '{name}' no esta definida.");
+
+        int GetEnvInt(string name)
+        {
+            var value = GetEnv(name);
+            if (!int.TryParse(value, out var result))
+            {
+                throw new InvalidOperationException($"La variable de entorno '{name}' debe ser un entero.");
+            }
+
+            return result;
+        }
+
+        options.BaseUrl = GetEnv("KEYNUA_BASE_URL");
+        options.ApiKey = GetEnv("KEYNUA_API_KEY");
+        options.Authorization = GetEnv("KEYNUA_AUTHORIZATION");
+        options.TemplateId = GetEnv("KEYNUA_TEMPLATE_ID");
+        options.Banking = GetEnv("KEYNUA_BANKING");
+        options.Product = GetEnv("KEYNUA_PRODUCT");
+        options.ExpirationInHours = GetEnvInt("KEYNUA_EXPIRATION_IN_HOURS");
+
+        return options;
     }
 }

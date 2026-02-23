@@ -1,6 +1,7 @@
 using Application;
 using EventListener;
 using SystemAPI.Handlers;
+using SystemAPI.Middlewares;
 
 /* ********************************************************************************************************          
 # * Copyright � 2026 Arify Labs - All rights reserved.   
@@ -41,6 +42,8 @@ builder.Services.AddSwaggerGen();
 builder.Services.AddInMemoryEventListenerServices();
 
 var app = builder.Build();
+
+app.UseMiddleware<ErrorHandlingMiddleware>();
 
 app.Use(async (context, next) =>
 {

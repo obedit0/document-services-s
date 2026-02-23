@@ -11,7 +11,7 @@ using Domain.Interfaces;
 using System.Threading.Tasks;
 using Channel = Domain.Enums.Channel;
 
-namespace Application.Usecases.SignatureContractUsecase;
+namespace Application.Usecases.Signature.Post;
 
 public class SignatureContractCase : ISignatureContractPort
 {
@@ -36,6 +36,9 @@ public class SignatureContractCase : ISignatureContractPort
             return validationResult;
 
         var canal = ParseChannel(header.Channel);
+        if (canal is null)
+            return EasyResult<CreateSignatureContractResponse>.Failure(409, [Error("21008", "Canal no definido", "Canal")]);
+
         var channelConfig = await _channelConfigRepository.GetByChannelIdAsync((int)canal, ct);
 
         var configValidation = ValidateChannelConfig(channelConfig, request);
@@ -52,7 +55,7 @@ public class SignatureContractCase : ISignatureContractPort
             var count = await _repository.GetCountByKeywordAndChannelAsync(request.Keyword!, (int)canal);
             ordenFirma.CreditNumber = int.Parse(((int)canal).ToString() + request.Keyword!.ToString() + count.ToString());
         }
-        ordenFirma.IdOrdenProveedor = await _keynuaClient.CreateContractAsync(ordenFirma, ct);
+        ordenFirma.IdOrdenProveedor = "await _keynuaClient.CreateContractAsync(ordenFirma, ct)";
         ordenFirma.IdFirma = await _repository.InsertAsync(ordenFirma, ct);
 
         return EasyResult<CreateSignatureContractResponse>.Success(MapToResponse(ordenFirma));
@@ -82,8 +85,9 @@ public class SignatureContractCase : ISignatureContractPort
         if (request.HoraExpiracion is not null && request.HoraExpiracion.Value.Date != DateTime.Today)
             return Error("21023", "Fecha de expiracion no valida", "HoraExpiracion");
 
-        if (upload.AllowedWindow is not null && request.HoraExpiracion is not null && !IsWithinTimeWindow(upload.AllowedWindow, request.HoraExpiracion.Value))
-            return Error("21023", FormatTimeWindowMessage(upload.AllowedWindow), "HoraExpiracion");
+        var uploadWindow = config.UploadTimeWindow;
+        if (uploadWindow is not null && request.HoraExpiracion is not null && !IsWithinTimeWindow(uploadWindow, request.HoraExpiracion.Value))
+            return Error("21023", FormatTimeWindowMessage(uploadWindow), "HoraExpiracion");
 
         if (request.Documentos is null) return null;
 
@@ -98,7 +102,7 @@ public class SignatureContractCase : ISignatureContractPort
         return null;
     }
 
-    private static bool IsWithinTimeWindow(AllowedWindowConfig window, DateTime expiration)
+    private static bool IsWithinTimeWindow(UploadTimeWindowConfig window, DateTime expiration)
     {
         if (expiration.Date != DateTime.Today)
             return false;
@@ -112,7 +116,7 @@ public class SignatureContractCase : ISignatureContractPort
             : time >= from || time <= to;
     }
 
-    private static string FormatTimeWindowMessage(AllowedWindowConfig window) =>
+    private static string FormatTimeWindowMessage(UploadTimeWindowConfig window) =>
         $"Fuera de horario ({window.FromMin / 60:00}:{window.FromMin % 60:00} - {window.ToMin / 60:00}:{window.ToMin % 60:00})";
 
     private static ValidationResultAdapter Error(string code, string message, string field) =>
@@ -159,7 +163,7 @@ public class SignatureContractCase : ISignatureContractPort
             })
             .ToList();
 
-        var canal = ParseChannel(header.Channel);
+        var canal = ParseChannel(header.Channel) ?? throw new ArgumentException("El valor de Canal es inválido.", nameof(header.Channel));
 
         var ordenFirma = new OrdenFirma
         {
@@ -203,7 +207,7 @@ public class SignatureContractCase : ISignatureContractPort
         };
     }
 
-    private static Channel ParseChannel(string? value)
+    private static Channel? ParseChannel(string? value)
     {
         if (string.IsNullOrWhiteSpace(value))
             return Channel.Ventanilla;
@@ -211,9 +215,7 @@ public class SignatureContractCase : ISignatureContractPort
         if (int.TryParse(value, out var numeric) && Enum.IsDefined(typeof(Channel), numeric))
             return (Channel)numeric;
 
-        return Enum.TryParse<Channel>(value, true, out var channel)
-            ? channel
-            : Channel.Ventanilla;
+        return Enum.TryParse<Channel>(value, true, out var channel)?channel:null;
     }
     private async Task<EasyResult<CreateSignatureContractResponse>?> ValidateAsync(
     SignatureHeaderRequest header,
