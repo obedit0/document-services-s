@@ -24,12 +24,10 @@ internal static class FluentValidationExecutor
         if (validResult.IsValid) return Array.Empty<ValidationResultAdapter>();
 
         return validResult.Errors
-            .Select(x => new ValidationResultAdapter
-            {
-                Code = x.ErrorCode,
-                Message = x.ErrorMessage,
-                Field = x.PropertyName
-            })
+            .Select(x => new ValidationResultAdapter(
+                x.ErrorCode,
+                x.ErrorMessage,
+                x.PropertyName))
             .ToList();
     }
 
@@ -42,11 +40,9 @@ internal static class FluentValidationExecutor
 
         return result.IsValid
             ? Array.Empty<ValidationResultAdapter>()
-            : result.Errors.Select(e => new ValidationResultAdapter
-            {
-                Code = e.ErrorCode,
-                Message = e.ErrorMessage,
-                Field = e.PropertyName
-            }).ToList();
+            : result.Errors.Select(e => new ValidationResultAdapter(
+                e.ErrorCode,
+                e.ErrorMessage,
+                e.PropertyName)).ToList();
     }
 }

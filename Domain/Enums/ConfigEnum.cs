@@ -3,14 +3,15 @@ using System.Reflection;
 
 namespace Domain.Enums;
 
-public enum EstadoFirma
+public enum SignatureStatus
 {
     PENDIENTE,
     EN_PROCESO,
     COMPLETADO,
-    ANULADO,
+    ANULADO,        //Cuando se extorna la solicitud
     EXPIRADO,
-    ERROR
+    ERROR,
+    CANCELADO       //Cuando el usuario cancela la solicitud manualmente
 }
 public enum DocumentType
 {
@@ -90,7 +91,7 @@ public enum CurrencyType : int
     Dolares = 2
 }
 
-public enum Channel
+public enum ChannelEnum
 {
     [Description("VENTANILLA")]
     Ventanilla = 1,
@@ -128,6 +129,7 @@ public enum Channel
     [Description("CCE")]
     CCE = 12
 }
+
 
 public enum ClientType
 {

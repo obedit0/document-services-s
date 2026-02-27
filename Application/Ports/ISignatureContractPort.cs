@@ -6,5 +6,5 @@ namespace Application.Ports;
 
 public interface ISignatureContractPort
 {
-    Task<EasyResult<CreateSignatureContractResponse>> CreateAsync(SignatureHeaderRequest header, CreateSignatureContractRequest request, CancellationToken ct = default);
+    Task<EasyResult<SignatureResponse>> CreateAsync(SignatureHeaderRequest header, SignatureRequest request, CancellationToken ct = default);
 }

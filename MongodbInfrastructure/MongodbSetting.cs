@@ -2,8 +2,9 @@ using Domain.Interfaces;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using MongoDB.Driver;
-using MongodbInfrastructure.Repositories;
 using Domain.Commons;
+using MongodbInfrastructure.Commnads;
+using MongodbInfrastructure.Queries;
 namespace MongodbInfrastructure;
 
 public static class MongodbSetting
@@ -23,8 +24,10 @@ public static class MongodbSetting
             return sp.GetRequiredService<IMongoClient>().GetDatabase(cfg.DatabaseName);
         });
 
-        services.AddScoped<IOrdenFirmaRepository, MongoOrdenFirmaRepository>();
-        services.AddScoped<IChannelConfigRepository, MongoChannelConfigRepository>();
+        services.AddScoped<ISignatureQuery, MongoSignatureQuery>();
+        services.AddScoped<ISignatureCommand, MongoSignatureCommand>();
+        services.AddScoped<IChannelQuery, MongoChannelQuery>();
+        services.AddScoped<IMicroserviceTraceRepository, MongoMicroserviceTraceCommand>();
     }
 
     private static IMongoClient BuildMongoClient(MongoConnectionConfig cfg)
@@ -47,6 +50,10 @@ public static class MongodbSetting
         settings.ServerSelectionTimeout = TimeSpan.FromSeconds(5);
         settings.ConnectTimeout = TimeSpan.FromSeconds(15);
         settings.SocketTimeout = TimeSpan.FromSeconds(10);
+        settings.ReadPreference = ReadPreference.Primary;
+        settings.MaxConnectionPoolSize = 300;  // ejemplo, ajústalo
+        settings.MinConnectionPoolSize = 20;
+        settings.MaxConnecting = 10;           // limita conexiones “creándose” a la vez (útil bajo picos)
 
         return new MongoClient(settings);
     }

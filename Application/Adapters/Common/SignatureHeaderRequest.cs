@@ -9,7 +9,7 @@ public class SignatureHeaderRequest
     public string? MessageIdentification { get; set; }
 
     [FromHeader(Name = "channelIdentification")]
-    public string? Channel { get; set; }
+    public string? ChannelIdentification { get; set; }
 
 }
 

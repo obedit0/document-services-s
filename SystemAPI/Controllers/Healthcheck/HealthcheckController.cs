@@ -5,7 +5,7 @@ using System.Diagnostics;
 
 namespace SystemAPI.Controllers.Healthcheck;
 
-[Route("/")]
+[Route("/document-services-s/v1")]
 [ApiController]
 public class HealthcheckController : ControllerBase
 {

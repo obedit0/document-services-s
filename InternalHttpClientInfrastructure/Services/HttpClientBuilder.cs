@@ -1,14 +1,15 @@
-﻿using Domain.Containers.MemoryEvent;
+﻿using Domain.Catalogs;
+using Domain.Containers.MemoryEvent;
 using Domain.Entities.Internals;
-using InternalHttpClientInfrastructure.Collections;
+using Domain.Exceptions;
+using KeynuaInfrastructure.Collections.Response;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
-using System.Net.Http.Json;
+using System.Net;
 using System.Text;
 using System.Text.Json;
 
 /* ********************************************************************************************************          
-# * Copyright � 2025 Arify Labs - All rights reserved.   
+# * Copyright © 2025 Arify Labs - All rights reserved.   
 # * 
 # * Info                  : Http Client Builder.
 # *
@@ -23,16 +24,15 @@ namespace InternalHttpClientInfrastructure.Services;
 
 public sealed class HttpClientBuilder
 {
+    private const string DefaultClientName = "ArifyClient";
+
     private readonly IHttpClientFactory _factory;
     private readonly ILogger _logger;
     private readonly JsonSerializerOptions _jsonOptions;
 
-    private string _clientName = "ArifyClient";
     private string? _baseUrl;
     private string? _endpoint;
     private readonly Dictionary<string, string> _headers = new();
-    private readonly Dictionary<string, string> _query = new();
-    private TimeSpan? _timeout;
     private MicroserviceCallMemoryQueue? _queue;
     private string? _operationName;
     private string? _keyword;
@@ -60,13 +60,6 @@ public sealed class HttpClientBuilder
         return this;
     }
 
-    public HttpClientBuilder WithClient(string name)
-    {
-        ArgumentException.ThrowIfNullOrWhiteSpace(name);
-        _clientName = name;
-        return this;
-    }
-
     public HttpClientBuilder WithBaseUrl(string baseUrl)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(baseUrl);
@@ -89,34 +82,6 @@ public sealed class HttpClientBuilder
         return this;
     }
 
-    public HttpClientBuilder WithBearerToken(string token)
-    {
-        ArgumentException.ThrowIfNullOrWhiteSpace(token);
-        return WithHeader("Authorization", $"Bearer {token}");
-    }
-
-    public HttpClientBuilder WithAuthorization(string scheme, string token)
-    {
-        ArgumentException.ThrowIfNullOrWhiteSpace(scheme);
-        ArgumentException.ThrowIfNullOrWhiteSpace(token);
-        return WithHeader("Authorization", $"{scheme} {token}");
-    }
-
-    public HttpClientBuilder WithQuery(string key, string value)
-    {
-        ArgumentException.ThrowIfNullOrWhiteSpace(key);
-        ArgumentNullException.ThrowIfNull(value);
-        _query[key] = value;
-        return this;
-    }
-
-    public HttpClientBuilder WithTimeout(TimeSpan timeout)
-    {
-        ArgumentOutOfRangeException.ThrowIfLessThanOrEqual(timeout, TimeSpan.Zero);
-        _timeout = timeout;
-        return this;
-    }
-
     private Uri BuildUri()
     {
         if (string.IsNullOrWhiteSpace(_baseUrl))
@@ -125,16 +90,7 @@ public sealed class HttpClientBuilder
         var path = string.IsNullOrWhiteSpace(_endpoint)
             ? _baseUrl
             : $"{_baseUrl}/{_endpoint}";
-
-        if (_query.Count == 0)
-            return new Uri(path);
-
-        var uriBuilder = new UriBuilder(path);
-        var queryString = string.Join("&", _query.Select(kv =>
-            $"{Uri.EscapeDataString(kv.Key)}={Uri.EscapeDataString(kv.Value)}"));
-        uriBuilder.Query = queryString;
-
-        return uriBuilder.Uri;
+        return new Uri(path);
     }
 
     private HttpRequestMessage BuildRequest(HttpMethod method, object? body, out string? serializedBody)
@@ -184,10 +140,7 @@ public sealed class HttpClientBuilder
 
     private async Task<HttpResponseResult<T>> ExecuteRequestAsync<T>(HttpMethod method, object? body, CancellationToken cancellationToken)
     {
-        var client = _factory.CreateClient(_clientName);
-
-        if (_timeout.HasValue)
-            client.Timeout = _timeout.Value;
+        var client = _factory.CreateClient(DefaultClientName);
 
         using var request = BuildRequest(method, body, out var serializedBody);
 

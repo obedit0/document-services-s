@@ -6,7 +6,7 @@ using SystemAPI.Helpers;
 
 namespace SystemAPI.Controllers.ExampleBasic;
 
-[Route("service-domain-s/v1/example-behavior-qualifier")]
+[Route("document-services-s/v1/example-behavior-qualifier")]
 [ApiController]
 [DefaultErrorCode("11033")]
 public class ExampleController : ControllerBase

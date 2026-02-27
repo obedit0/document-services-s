@@ -7,8 +7,13 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="Entities\Document\**" />
+    <EmbeddedResource Remove="Entities\Document\**" />
+    <None Remove="Entities\Document\**" />
+  </ItemGroup>
+
+  <ItemGroup>
     <Folder Include="Containers\MemoryCache\" />
-    <Folder Include="Entities\Document\" />
     <Folder Include="Internals\" />
     <Folder Include="Enums\" />
     <Folder Include="Enums\" />

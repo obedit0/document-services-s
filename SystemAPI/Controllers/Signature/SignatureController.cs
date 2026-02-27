@@ -1,6 +1,7 @@
 ﻿using Application.Adapters.Common;
 using Application.Adapters.SignatureContracts;
-using Application.Adapters.UpdateDocuments;
+using Application.Adapters.SignatureContracts.DocumentSignatureCompletion;
+using Application.Adapters.SignatureContracts.UpdateDocuments;
 using Application.Ports;
 using Microsoft.AspNetCore.Mvc;
 using SystemAPI.Attributes;
@@ -8,65 +9,41 @@ using SystemAPI.Helpers;
 
 namespace SystemAPI.Controllers.Signature;
 
-[Route("document-services-s/signature-request")]
+[Route("document-services-s/v1/signature-request")]
 [ApiController]
 public class SignatureController : ControllerBase
 {
     private readonly ISignatureContractPort _signaturePort;
+    private readonly ICancelSignatureContractPort _cancelSignatureContractPort;
     private readonly IUpdateSignedDocumentsPort _updateSignedDocumentsPort;
     private readonly IUpdateProviderDocumentsPort _updateProviderDocumentsPort;
-    private readonly IGetOrderByProviderIdPort _getOrderByProviderIdPort;
     private readonly IGetSignatureStatusPort _getSignatureStatusPort;
+    private readonly IGetSignatureDocumentStatusPort _getSignatureDocumentStatusPort;
     private readonly ILogger<SignatureController> _logger;
 
     public SignatureController(
         ILogger<SignatureController> logger,
         ISignatureContractPort signaturePort,
+        ICancelSignatureContractPort cancelSignatureContractPort,
         IUpdateSignedDocumentsPort updateSignedDocumentsPort,
         IUpdateProviderDocumentsPort updateProviderDocumentsPort,
-        IGetOrderByProviderIdPort getOrderByProviderIdPort,
-        IGetSignatureStatusPort getSignatureStatusPort)
+        IGetSignatureStatusPort getSignatureStatusPort,
+        IGetSignatureDocumentStatusPort getSignatureDocumentStatusPort)
     {
         _logger = logger;
         _signaturePort = signaturePort;
+        _cancelSignatureContractPort = cancelSignatureContractPort;
         _updateSignedDocumentsPort = updateSignedDocumentsPort;
         _updateProviderDocumentsPort = updateProviderDocumentsPort;
-        _getOrderByProviderIdPort = getOrderByProviderIdPort;
         _getSignatureStatusPort = getSignatureStatusPort;
+        _getSignatureDocumentStatusPort = getSignatureDocumentStatusPort;
     }
 
     #region GET
-    [HttpGet("retrieve")]
-    [DefaultErrorCode("12004")]
-    public async Task<IActionResult> GetByProviderId(
-        [FromHeader] SignatureHeaderRequest header,
-        [FromQuery] string idOrdenProveedor)
-    {
-        var request = new GetOrderByProviderIdRequest { IdOrdenProveedor = idOrdenProveedor };
-        var result = await _getOrderByProviderIdPort.ExecuteAsync(header, request);
-
-        if (!result.IsSuccess)
-        {
-            _logger.LogWarning("TraceId=[{Headers}] Validation=[{ValidationErrors}]",
-                LoggerMapperHelper.ToString(header),
-                LoggerMapperHelper.ToString(result.ValidationValues.FirstOrDefault()!));
-            return StatusCode(result.Status, EasyResponseHelper.WarningResponse(result.ValidationValues));
-        }
-
-        if (result.Status == 204)
-        {
-            _logger.LogWarning("TraceId=[{Headers}]", LoggerMapperHelper.ToString(header));
-            return NoContent();
-        }
-
-        return Ok(EasyResponseHelper.SuccessResponse(result.SuccessValue!));
-    }
-
-    [HttpGet("document-services-s/signature/status/retrieve")]
-    [DefaultErrorCode("12005")]
+    [HttpGet("consultar")]
     public async Task<IActionResult> RetrieveStatus(
-        [FromHeader] SignatureHeaderRequest header,
-        [FromQuery] GetSignatureStatusRequest query)
+        SignatureHeaderRequest header,
+        [FromQuery] SignatureInquiryRequest query)
     {
         var result = await _getSignatureStatusPort.ExecuteAsync(header, query);
 
@@ -89,11 +66,10 @@ public class SignatureController : ControllerBase
     #endregion
 
     #region POST
-    [HttpPost("initiate")]
-    [DefaultErrorCode("12001")]
+    [HttpPost("crear")]
     public async Task<IActionResult> Create(
         SignatureHeaderRequest header,
-        [FromBody] CreateSignatureContractRequest body)
+        [FromBody] SignatureRequest body)
     {
         var result = await _signaturePort.CreateAsync(header, body);
 
@@ -116,11 +92,10 @@ public class SignatureController : ControllerBase
     #endregion
 
     #region PUT
-    [HttpPut("system-signature-s/v1/contracts/signed-documents")]
-    [DefaultErrorCode("12002")]
+    [HttpPut("guardar-documentos")]
     public async Task<IActionResult> UpdateSignedDocuments(
-        [FromHeader] SignatureHeaderRequest header,
-        [FromBody] UpdateSignedDocumentsRequest body)
+        SignatureHeaderRequest header,
+        [FromBody] SignatureUpdateDocumentRequest body)
     {
         var result = await _updateSignedDocumentsPort.ExecuteAsync(header, body);
 
@@ -141,11 +116,10 @@ public class SignatureController : ControllerBase
         return Ok(EasyResponseHelper.SuccessResponse(result.SuccessValue!));
     }
 
-    [HttpPut("system-signature-s/v1/contracts/provider-documents")]
-    [DefaultErrorCode("12003")]
+    [HttpPut("finalizar")]
     public async Task<IActionResult> UpdateProviderDocuments(
-        [FromHeader] SignatureHeaderRequest header,
-        [FromBody] UpdateProviderDocumentsRequest body)
+        SignatureHeaderRequest header,
+        [FromBody] SignatureCompletionRequest body)
     {
         var result = await _updateProviderDocumentsPort.ExecuteAsync(header, body);
 
@@ -166,4 +140,62 @@ public class SignatureController : ControllerBase
         return Ok(EasyResponseHelper.SuccessResponse(result.SuccessValue!));
     }
     #endregion
+
+    [HttpPut("cancelar")]
+    public async Task<IActionResult> CancelarOrden(
+        SignatureHeaderRequest header,
+        [FromQuery] int? keyword)
+    {
+        var request = new SignatureCancellationRequest
+        {
+            Keyword = keyword
+        };
+
+        var result = await _cancelSignatureContractPort.ExecuteAsync(header, request);
+
+        if (!result.IsSuccess)
+        {
+            _logger.LogWarning("TraceId=[{Headers}] Validation=[{ValidationErrors}]",
+                LoggerMapperHelper.ToString(header),
+                LoggerMapperHelper.ToString(result.ValidationValues.FirstOrDefault()!));
+            return StatusCode(result.Status, EasyResponseHelper.WarningResponse(result.ValidationValues));
+        }
+
+        if (result.Status == 204)
+        {
+            _logger.LogWarning("TraceId=[{Headers}]", LoggerMapperHelper.ToString(header));
+            return NoContent();
+        }
+
+        return Ok(EasyResponseHelper.SuccessResponse(result.SuccessValue!));
+    }
+
+    [HttpGet("documents")]
+    public async Task<IActionResult> GetDocumentStatus(
+        SignatureHeaderRequest header,
+        [FromQuery] int? keyword)
+    {
+        var request = new GetSignatureDocumentStatusRequest
+        {
+            Keyword = keyword
+        };
+
+        var result = await _getSignatureDocumentStatusPort.ExecuteAsync(header, request);
+
+        if (!result.IsSuccess)
+        {
+            _logger.LogWarning("TraceId=[{Headers}] Validation=[{ValidationErrors}]",
+                LoggerMapperHelper.ToString(header),
+                LoggerMapperHelper.ToString(result.ValidationValues.FirstOrDefault()!));
+            return StatusCode(result.Status, EasyResponseHelper.WarningResponse(result.ValidationValues));
+        }
+
+        if (result.Status == 204)
+        {
+            _logger.LogWarning("TraceId=[{Headers}]", LoggerMapperHelper.ToString(header));
+            return NoContent();
+        }
+
+        return Ok(EasyResponseHelper.SuccessResponse(result.SuccessValue!));
+    }
 }

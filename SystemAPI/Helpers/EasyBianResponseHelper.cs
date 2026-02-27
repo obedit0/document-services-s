@@ -4,7 +4,7 @@ using System.Runtime.CompilerServices;
 using SystemAPI.Models.Internals;
 
 /* ********************************************************************************************************          
-# * Copyright � 2026 Arify Labs - All rights reserved.   
+# * Copyright © 2026 Arify Labs - All rights reserved.   
 # * 
 # * Info                  : Easy BIAN Response Helper.
 # *

@@ -6,8 +6,8 @@ namespace Application.Ports;
 
 public interface IGetSignatureStatusPort
 {
-    Task<EasyResult<GetSignatureStatusResponse>> ExecuteAsync(
+    Task<EasyResult<SignatureInquiryResponse>> ExecuteAsync(
         SignatureHeaderRequest header,
-        GetSignatureStatusRequest request,
+        SignatureInquiryRequest request,
         CancellationToken ct = default);
 }

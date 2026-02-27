@@ -31,12 +31,10 @@ public class SqsTestCase : ISqsTestPort
         {
             return EasyResult<SqsSendTestResponse>.Failure(502,
             [
-                new ValidationResultAdapter
-                {
-                    Code = "21098",
-                    Message = sendResult.ErrorMessage ?? MessageCatalog.GetErrorByCode(21098),
-                    Field = "Message"
-                }
+                new ValidationResultAdapter(
+                    "21098",
+                    sendResult.ErrorMessage ?? MessageCatalog.GetErrorByCode(21098),
+                    "Message")
             ]);
         }
 

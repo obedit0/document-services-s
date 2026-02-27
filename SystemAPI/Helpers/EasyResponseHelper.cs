@@ -4,7 +4,7 @@ using Application.Internals.Adapters;
 using SystemAPI.Models.Internals;
 
 /* ********************************************************************************************************          
-# * Copyright � 2026 Arify Labs - All rights reserved.   
+# * Copyright © 2026 Arify Labs - All rights reserved.   
 # * 
 # * Info                  : Easy Response Helper.
 # *

@@ -1,5 +1,6 @@
 ﻿using Domain.Interfaces;
 using InternalHttpClientInfrastructure.Collections;
+using InternalHttpClientInfrastructure.Commands;
 using InternalHttpClientInfrastructure.Queries;
 using InternalHttpClientInfrastructure.Services;
 using Microsoft.Extensions.Configuration;
@@ -11,7 +12,7 @@ using System.Net;
 using System.Net.Http.Headers;
 
 /* ********************************************************************************************************          
-# * Copyright � 2026 Arify Labs - All rights reserved.   
+# * Copyright © 2026 Arify Labs - All rights reserved.   
 # * 
 # * Info                  : Http Conector Dynamic Keep-Alive.
 # *
@@ -39,7 +40,7 @@ public static class KeynuaSetting
         .ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler
         {
             // === Equivalentes a tu pool ===
-            MaxConnectionsPerServer = 10,   // max_connections
+            MaxConnectionsPerServer = 200,   // max_connections
             PooledConnectionIdleTimeout = TimeSpan.FromSeconds(30), // keepalive_expiry (idle)
             PooledConnectionLifetime = TimeSpan.FromMinutes(5), // rotación para DNS/TLS
             // Keep-alive HTTP/2 y HTTP/1.1 se gestiona automáticamente por el handler
@@ -57,7 +58,8 @@ public static class KeynuaSetting
         .AddPolicyHandler(HttpPolicyExtensions
         .HandleTransientHttpError()
         .WaitAndRetryAsync(2, _ => TimeSpan.FromMilliseconds(200)));
-        services.AddScoped<IKeynuaContractClient, KeynuaContractClient>();
+        services.AddScoped<ISignatureContractQuery, KeynuaContractQuery>();
+        services.AddScoped<ISignatureContractCommand, KeynuaContractCommand>();
     }
 
     private static KeynuaContext BuildKeynuaOptions(IConfiguration configuration, bool isDevelopment)
@@ -66,17 +68,11 @@ public static class KeynuaSetting
 
         if (isDevelopment)
         {
-            options.BaseUrl = configuration["Keynua:BaseUrl"] ?? options.BaseUrl;
-            options.ApiKey = configuration["Keynua:ApiKey"] ?? options.ApiKey;
-            options.Authorization = configuration["Keynua:Authorization"] ?? options.Authorization;
-            options.TemplateId = configuration["Keynua:TemplateId"] ?? options.TemplateId;
-            options.Banking = configuration["Keynua:Banking"] ?? options.Banking;
-            options.Product = configuration["Keynua:Product"] ?? options.Product;
-
-            if (int.TryParse(configuration["Keynua:ExpirationInHours"], out var expiration))
-            {
-                options.ExpirationInHours = expiration;
-            }
+            options.BaseUrl = configuration["Keynua:BaseUrl"];
+            options.ApiKey = configuration["Keynua:ApiKey"];
+            options.Authorization = configuration["Keynua:Authorization"];
+            options.Banking = configuration["Keynua:Banking"];
+            options.Product = configuration["Keynua:Product"];
 
             return options;
         }
@@ -85,24 +81,11 @@ public static class KeynuaSetting
             Environment.GetEnvironmentVariable(name)
             ?? throw new InvalidOperationException($"La variable de entorno '{name}' no esta definida.");
 
-        int GetEnvInt(string name)
-        {
-            var value = GetEnv(name);
-            if (!int.TryParse(value, out var result))
-            {
-                throw new InvalidOperationException($"La variable de entorno '{name}' debe ser un entero.");
-            }
-
-            return result;
-        }
-
         options.BaseUrl = GetEnv("KEYNUA_BASE_URL");
         options.ApiKey = GetEnv("KEYNUA_API_KEY");
         options.Authorization = GetEnv("KEYNUA_AUTHORIZATION");
-        options.TemplateId = GetEnv("KEYNUA_TEMPLATE_ID");
         options.Banking = GetEnv("KEYNUA_BANKING");
         options.Product = GetEnv("KEYNUA_PRODUCT");
-        options.ExpirationInHours = GetEnvInt("KEYNUA_EXPIRATION_IN_HOURS");
 
         return options;
     }

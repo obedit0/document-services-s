@@ -45,15 +45,6 @@ public sealed class SqsMessagePublisher : ISqsMessagePublisher
         {
             var isFifoQueue = _options.QueueUrl.EndsWith(".fifo", StringComparison.OrdinalIgnoreCase);
 
-            if (!isFifoQueue &&
-                (!string.IsNullOrWhiteSpace(_options.MessageGroupId) ||
-                 !string.IsNullOrWhiteSpace(_options.MessageDeduplicationId)))
-            {
-                _logger.LogWarning(
-                    "SQS standard queue ignores MessageGroupId/MessageDeduplicationId. QueueUrl={QueueUrl}",
-                    _options.QueueUrl);
-            }
-
             var request = new SendMessageRequest
             {
                 QueueUrl = _options.QueueUrl,
@@ -72,9 +63,7 @@ public sealed class SqsMessagePublisher : ISqsMessagePublisher
                 }
 
                 request.MessageGroupId = _options.MessageGroupId;
-
-                if (!string.IsNullOrWhiteSpace(_options.MessageDeduplicationId))
-                    request.MessageDeduplicationId = _options.MessageDeduplicationId;
+                request.MessageDeduplicationId = Guid.NewGuid().ToString();
             }
 
             var response = await _sqs.SendMessageAsync(request, ct);

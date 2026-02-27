@@ -2,8 +2,14 @@
 
 public sealed class ValidationResultAdapter
 {
-    public required string Code { set; get; }
-    public required string Message { set; get; }
-    public string? Field { set; get; }
+    public string Code { get; }
+    public string Message { get; }
+    public string? Field { get; }
     //public IReadOnlyCollection<ValidationError> Validations { get; init; } = Array.Empty<ValidationError>();
+    public ValidationResultAdapter(string code, string message, string? field)
+    {
+        Code = code;
+        Message = message;
+        Field = field;
+    }
 }

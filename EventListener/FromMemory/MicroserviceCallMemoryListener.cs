@@ -29,8 +29,8 @@ internal class MicroserviceCallMemoryListener : BackgroundService
             try
             {
                 using var scope = _scopeFactory.CreateScope();
-                var tracePort = scope.ServiceProvider.GetRequiredService<IMicroserviceCallTracePort>();
-                var sendResult = await tracePort.SendAsync(myEvent, stoppingToken);
+                var tracePort = scope.ServiceProvider.GetRequiredService<IMicroserviceTracePort>();
+                var sendResult = await tracePort.PublishCallAsync(myEvent, stoppingToken);
                 if (!sendResult.IsSuccess)
                 {
                     _logger.LogWarning(

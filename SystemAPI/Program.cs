@@ -4,7 +4,7 @@ using SystemAPI.Handlers;
 using SystemAPI.Middlewares;
 
 /* ********************************************************************************************************          
-# * Copyright � 2026 Arify Labs - All rights reserved.   
+# * Copyright © 2026 Arify Labs - All rights reserved.   
 # * 
 # * Info                  : System API Template.
 # *

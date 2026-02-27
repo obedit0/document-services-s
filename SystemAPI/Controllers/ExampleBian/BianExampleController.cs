@@ -9,7 +9,7 @@ using SystemAPI.Helpers;
 
 namespace SystemAPI.Controllers.ExampleBian;
 
-[Route("service-domain-s/v1/example2-behavior-qualifier")]
+[Route("document-services-s/v1/example2-behavior-qualifier")]
 [ApiController]
 [BianResponse]
 public class BianExampleController : ControllerBase

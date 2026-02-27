@@ -25,4 +25,8 @@
     <ProjectReference Include="..\MongodbInfrastructure\MongodbInfrastructure.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="Mapper\DocumentSignatureInquiryMapper\" />
+  </ItemGroup>
+
 </Project>
