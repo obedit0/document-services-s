@@ -1,8 +1,8 @@
 ﻿using Domain.Interfaces;
+using Domain.Commons;
 using InternalHttpClientInfrastructure.Collections;
 using InternalHttpClientInfrastructure.Commands;
 using InternalHttpClientInfrastructure.Queries;
-using InternalHttpClientInfrastructure.Services;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
@@ -69,8 +69,8 @@ public static class KeynuaSetting
         if (isDevelopment)
         {
             options.BaseUrl = configuration["Keynua:BaseUrl"];
-            options.ApiKey = configuration["Keynua:ApiKey"];
-            options.Authorization = configuration["Keynua:Authorization"];
+            options.ApiKey = CryptoCommon.decryptString(configuration["Keynua:ApiKey"]);
+            options.Authorization = CryptoCommon.decryptString(configuration["Keynua:Authorization"]);
             options.Banking = configuration["Keynua:Banking"];
             options.Product = configuration["Keynua:Product"];
 
@@ -82,8 +82,8 @@ public static class KeynuaSetting
             ?? throw new InvalidOperationException($"La variable de entorno '{name}' no esta definida.");
 
         options.BaseUrl = GetEnv("KEYNUA_BASE_URL");
-        options.ApiKey = GetEnv("KEYNUA_AUTH_API_KEY");
-        options.Authorization = GetEnv("KEYNUA_AUTH_AUTHORIZATION");
+        options.ApiKey = CryptoCommon.decryptString(GetEnv("KEYNUA_AUTH_API_KEY"));
+        options.Authorization = CryptoCommon.decryptString(GetEnv("KEYNUA_AUTH_AUTHORIZATION"));
         options.Banking = GetEnv("KEYNUA_BANKING");
         options.Product = GetEnv("KEYNUA_PRODUCT");
 
