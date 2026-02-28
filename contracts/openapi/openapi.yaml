@@ -1,0 +1,668 @@
+openapi: 3.0.3
+info:
+  title: Document Services S API
+  version: 1.0.0
+  description: System Layer API para firmas de documentos.
+servers:
+  - url: http://localhost:8080
+tags:
+  - name: Healthcheck
+    description: Endpoints de salud y verificacion del servicio
+  - name: Signature
+    description: Gestion de ordenes de firma
+paths:
+  /document-services-s/v1:
+    get:
+      tags: [Healthcheck]
+      summary: Informacion del servicio
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ServiceInfo"
+  /document-services-s/v1/health:
+    get:
+      tags: [Healthcheck]
+      summary: Health check basico
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthBasic"
+  /document-services-s/v1/healthcheck:
+    get:
+      tags: [Healthcheck]
+      summary: Alias de health check basico
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthBasic"
+  /document-services-s/v1/health/detailed:
+    get:
+      tags: [Healthcheck]
+      summary: Health check detallado
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthDetailed"
+  /document-services-s/v1/ping:
+    get:
+      tags: [Healthcheck]
+      summary: Ping
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PingResponse"
+  /document-services-s/v1/health/ready:
+    get:
+      tags: [Healthcheck]
+      summary: Readiness
+      responses:
+        "200":
+          description: Ready
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthReady"
+        "503":
+          description: Not Ready
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthReady"
+  /document-services-s/v1/health/live:
+    get:
+      tags: [Healthcheck]
+      summary: Liveness
+      responses:
+        "200":
+          description: Alive
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthReady"
+        "503":
+          description: Not Alive
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthReady"
+  /document-services-s/v1/health/dependencies:
+    get:
+      tags: [Healthcheck]
+      summary: Healthcheck de dependencias externas
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthcheckDependenciesResponse"
+  /document-services-s/v1/debug-claims:
+    get:
+      tags: [Healthcheck]
+      summary: Debug de claims JWT
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+  /document-services-s/v1/signature-request/consultar:
+    get:
+      tags: [Signature]
+      summary: Consultar estado de firma
+      parameters:
+        - $ref: "#/components/parameters/messageIdentification"
+        - $ref: "#/components/parameters/channelIdentification"
+        - name: keyword
+          in: query
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SignatureInquiryResponseWrapper"
+        "422":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /document-services-s/v1/signature-request/crear:
+    post:
+      tags: [Signature]
+      summary: Crear orden de firma
+      parameters:
+        - $ref: "#/components/parameters/messageIdentification"
+        - $ref: "#/components/parameters/channelIdentification"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SignatureRequest"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SignatureResponseWrapper"
+        "422":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /document-services-s/v1/signature-request/guardar-documentos:
+    put:
+      tags: [Signature]
+      summary: Guardar documentos firmados (webhook alterno)
+      parameters:
+        - $ref: "#/components/parameters/messageIdentification"
+        - $ref: "#/components/parameters/channelIdentification"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SignatureUpdateDocumentRequest"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SignatureUpdateDocumentResponseWrapper"
+        "422":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /document-services-s/v1/signature-request/finalizar:
+    put:
+      tags: [Signature]
+      summary: Actualizar documentos del proveedor (webhook)
+      parameters:
+        - $ref: "#/components/parameters/messageIdentification"
+        - $ref: "#/components/parameters/channelIdentification"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SignatureCompletionRequest"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SignatureCompletionResponseWrapper"
+        "422":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /document-services-s/v1/signature-request/cancelar:
+    put:
+      tags: [Signature]
+      summary: Cancelar orden de firma
+      parameters:
+        - $ref: "#/components/parameters/messageIdentification"
+        - $ref: "#/components/parameters/channelIdentification"
+        - name: keyword
+          in: query
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SignatureCancellationResponseWrapper"
+        "422":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /document-services-s/v1/signature-request/documents:
+    get:
+      tags: [Signature]
+      summary: Consultar documentos firmados
+      parameters:
+        - $ref: "#/components/parameters/messageIdentification"
+        - $ref: "#/components/parameters/channelIdentification"
+        - name: keyword
+          in: query
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GetSignatureDocumentStatusResponseWrapper"
+        "422":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+components:
+  parameters:
+    messageIdentification:
+      name: messageIdentification
+      in: header
+      required: true
+      schema:
+        type: string
+        minLength: 5
+        maxLength: 42
+    channelIdentification:
+      name: channelIdentification
+      in: header
+      required: true
+      schema:
+        type: string
+  schemas:
+    ErrorResponse:
+      type: object
+      properties:
+        errors:
+          type: array
+          items:
+            $ref: "#/components/schemas/FieldError"
+    FieldError:
+      type: object
+      required: [statusCode, message]
+      properties:
+        statusCode:
+          type: string
+        message:
+          type: string
+        field:
+          type: string
+          nullable: true
+    SignatureResponseWrapper:
+      type: object
+      properties:
+        response:
+          $ref: "#/components/schemas/SignatureResponse"
+    SignatureInquiryResponseWrapper:
+      type: object
+      properties:
+        response:
+          $ref: "#/components/schemas/SignatureInquiryResponse"
+    SignatureCancellationResponseWrapper:
+      type: object
+      properties:
+        response:
+          $ref: "#/components/schemas/SignatureCancellationResponse"
+    SignatureUpdateDocumentResponseWrapper:
+      type: object
+      properties:
+        response:
+          $ref: "#/components/schemas/SignatureUpdateDocumentResponse"
+    SignatureCompletionResponseWrapper:
+      type: object
+      properties:
+        response:
+          $ref: "#/components/schemas/SignatureCompletionResponse"
+    GetSignatureDocumentStatusResponseWrapper:
+      type: object
+      properties:
+        response:
+          $ref: "#/components/schemas/GetSignatureDocumentStatusResponse"
+    SignatureRequest:
+      type: object
+      required:
+        - referencia
+        - titulo
+        - horaExpiracion
+        - idTiposNotificacion
+        - documentos
+        - clientes
+      properties:
+        referencia:
+          type: string
+        keyword:
+          type: integer
+        titulo:
+          type: string
+        descripcion:
+          type: string
+        horaExpiracion:
+          type: string
+          format: date-time
+        idTiposNotificacion:
+          type: array
+          minItems: 1
+          items:
+            type: string
+        pagare:
+          type: boolean
+        creditNumber:
+          type: integer
+        documentos:
+          type: array
+          minItems: 1
+          items:
+            $ref: "#/components/schemas/DocumentoRequest"
+        clientes:
+          type: array
+          minItems: 1
+          items:
+            $ref: "#/components/schemas/ClienteRequest"
+        observadores:
+          type: array
+          items:
+            $ref: "#/components/schemas/ObservadorRequest"
+    ClienteRequest:
+      type: object
+      required:
+        - idCliente
+        - tipoVinculo
+        - nombreCompleto
+      properties:
+        idCliente:
+          type: string
+        tipoVinculo:
+          type: string
+        nombreCompleto:
+          type: string
+        numeroDocumento:
+          type: string
+        email:
+          type: string
+        telefono:
+          type: string
+    DocumentoRequest:
+      type: object
+      required:
+        - name
+        - ownerClientId
+        - s3KeyOriginal
+      properties:
+        name:
+          type: string
+        ownerClientId:
+          type: array
+          minItems: 1
+          items:
+            type: string
+        s3KeyOriginal:
+          type: string
+        size:
+          type: integer
+          format: int64
+    ObservadorRequest:
+      type: object
+      required:
+        - idObservador
+        - email
+      properties:
+        idObservador:
+          type: string
+        email:
+          type: string
+        rol:
+          type: string
+    SignatureResponse:
+      type: object
+      properties:
+        idFirma:
+          type: string
+        referencia:
+          type: string
+        estado:
+          type: string
+        fechaCreacion:
+          type: string
+          format: date-time
+        fechaActualizacion:
+          type: string
+          format: date-time
+    SignatureInquiryResponse:
+      type: object
+      properties:
+        keyword:
+          type: integer
+        idOrdenKeynua:
+          type: string
+        cEstadoGeneral:
+          type: string
+        cEstadoCanal:
+          type: string
+        arrFirmantes:
+          type: array
+          items:
+            $ref: "#/components/schemas/SignatureStatusSignerResponse"
+    SignatureStatusSignerResponse:
+      type: object
+      properties:
+        cDNI:
+          type: string
+        cNombreCompleto:
+          type: string
+        cCorreo:
+          type: string
+        cCelular:
+          type: string
+        nEstado:
+          type: integer
+    SignatureCancellationResponse:
+      type: object
+      properties:
+        message:
+          type: string
+        estado:
+          type: string
+    SignatureUpdateDocumentRequest:
+      type: object
+      required:
+        - idFirma
+        - documents
+      properties:
+        idFirma:
+          type: string
+        documents:
+          type: array
+          minItems: 1
+          items:
+            $ref: "#/components/schemas/SignedDocumentRequest"
+    SignedDocumentRequest:
+      type: object
+      required:
+        - name
+        - s3KeyFirmado
+      properties:
+        name:
+          type: string
+        s3KeyFirmado:
+          type: string
+        urlExpiresAt:
+          type: string
+          format: date-time
+    SignatureUpdateDocumentResponse:
+      type: object
+      properties:
+        idFirma:
+          type: string
+        estado:
+          type: string
+        fechaActualizacion:
+          type: string
+          format: date-time
+        documentosActualizados:
+          type: integer
+    SignatureCompletionRequest:
+      type: object
+      required:
+        - idFirma
+        - documents
+      properties:
+        idFirma:
+          type: string
+        documents:
+          type: array
+          minItems: 1
+          items:
+            $ref: "#/components/schemas/ProviderDocumentRequest"
+    ProviderDocumentRequest:
+      type: object
+      required:
+        - name
+        - providerKeyFirmado
+      properties:
+        name:
+          type: string
+        providerKeyFirmado:
+          type: string
+        urlExpiresAt:
+          type: string
+          format: date-time
+    SignatureCompletionResponse:
+      type: object
+      properties:
+        idFirma:
+          type: string
+        estado:
+          type: string
+        fechaActualizacion:
+          type: string
+          format: date-time
+        documentosActualizados:
+          type: integer
+    GetSignatureDocumentStatusResponse:
+      type: object
+      properties:
+        idFirma:
+          type: string
+        estado:
+          type: string
+        idOrdenProveedor:
+          type: string
+        action:
+          type: string
+        documentos:
+          type: array
+          items:
+            $ref: "#/components/schemas/DocumentStatusDto"
+    DocumentStatusDto:
+      type: object
+      properties:
+        nombre:
+          type: string
+        tipo:
+          type: string
+        s3Key:
+          type: string
+        url:
+          type: string
+    ServiceInfo:
+      type: object
+      properties:
+        info:
+          type: string
+        status:
+          type: string
+    HealthBasic:
+      type: object
+      properties:
+        status:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+        uptime:
+          type: string
+        version:
+          type: string
+        environment:
+          type: string
+    HealthDetailed:
+      type: object
+      properties:
+        status:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+        uptime:
+          type: string
+        version:
+          type: string
+        environment:
+          type: string
+        checks:
+          type: array
+          items:
+            $ref: "#/components/schemas/HealthCheckEntry"
+    HealthCheckEntry:
+      type: object
+      properties:
+        name:
+          type: string
+        status:
+          type: string
+        description:
+          type: string
+        duration:
+          type: number
+    HealthcheckDependenciesResponse:
+      type: object
+      properties:
+        mongoDb:
+          type: boolean
+        keynua:
+          type: boolean
+        sqs:
+          type: boolean
+        overall:
+          type: boolean
+        checkedAt:
+          type: string
+          format: date-time
+    HealthReady:
+      type: object
+      properties:
+        status:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+    PingResponse:
+      type: object
+      properties:
+        message:
+          type: string
+        timestamp:
+          type: string
+          format: date-time

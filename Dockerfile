@@ -11,7 +11,6 @@ COPY ["Application/Application.csproj", "Application/"]
 COPY ["Domain/Domain.csproj", "Domain/"]
 COPY ["EventListener/EventListener.csproj", "EventListener/"]
 COPY ["AwsSqsInfrastructure/AwsSqsInfrastructure.csproj", "AwsSqsInfrastructure/"]
-COPY ["FakeApiInfrastructure/FakeApiInfrastructure.csproj", "FakeApiInfrastructure/"]
 COPY ["InternalHttpClientInfrastructure/KeynuaInfrastructure.csproj", "InternalHttpClientInfrastructure/"]
 COPY ["MongodbInfrastructure/MongodbInfrastructure.csproj", "MongodbInfrastructure/"]
 
@@ -49,10 +48,10 @@ ENTRYPOINT ["dotnet", "SystemAPI.dll"]
 #   -e MONGO_DB_SERVER=... \
 #   -e MONGO_DB_NAME=... \
 #   -e MONGO_DB_USER=... \
-#   -e MONGO_DB_PASSWD=... \
+#   -e MONGO_DB_PASSWORD=... \
 #   -e KEYNUA_BASE_URL=... \
-#   -e KEYNUA_API_KEY=... \
-#   -e KEYNUA_AUTHORIZATION=... \
+#   -e KEYNUA_AUTH_API_KEY=... \
+#   -e KEYNUA_AUTH_AUTHORIZATION=... \
 #   -e KEYNUA_TEMPLATE_ID=... \
 #   -e KEYNUA_BANKING=... \
 #   -e KEYNUA_PRODUCT=... \

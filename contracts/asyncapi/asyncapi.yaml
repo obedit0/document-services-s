@@ -1,0 +1,32 @@
+asyncapi: 2.6.0
+info:
+  title: Document Services S AsyncAPI
+  version: 1.0.0
+  description: Contrato de eventos publicados a AWS SQS.
+servers:
+  awsSqs:
+    url: https://sqs.{region}.amazonaws.com/{accountId}/{queueName}
+    protocol: sqs
+    description: AWS SQS queue
+    variables:
+      region:
+        default: us-east-1
+      accountId:
+        default: "000000000000"
+      queueName:
+        default: mi-cola.fifo
+channels:
+  aws.sqs.document-services-s:
+    description: Cola SQS utilizada por Document Services S para eventos.
+    publish:
+      summary: Publica un mensaje a la cola SQS
+      message:
+        name: SqsMessage
+        payload:
+          type: string
+          description: Cuerpo del mensaje enviado a la cola.
+components:
+  messages:
+    SqsMessage:
+      payload:
+        type: string

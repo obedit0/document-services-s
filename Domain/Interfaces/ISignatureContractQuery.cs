@@ -5,4 +5,5 @@ namespace Domain.Interfaces;
 public interface ISignatureContractQuery
 {
     Task<SignatureStatus> GetStatusAsync(string contractId, ChannelEnum channel, string messageIdentity, CancellationToken ct = default);
+    Task<bool> HealthcheckAsync(CancellationToken ct = default);
 }

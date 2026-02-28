@@ -99,4 +99,29 @@ public sealed class SqsMessagePublisher : ISqsMessagePublisher
             };
         }
     }
+
+    public async Task<bool> HealthcheckAsync(CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(_options.QueueUrl))
+        {
+            _logger.LogWarning("SQS healthcheck skipped: QueueUrl is empty");
+            return false;
+        }
+
+        try
+        {
+            var response = await _sqs.GetQueueAttributesAsync(new GetQueueAttributesRequest
+            {
+                QueueUrl = _options.QueueUrl,
+                AttributeNames = new List<string> { "QueueArn" }
+            }, ct);
+
+            return response.HttpStatusCode == HttpStatusCode.OK;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "SQS healthcheck failed");
+            return false;
+        }
+    }
 }

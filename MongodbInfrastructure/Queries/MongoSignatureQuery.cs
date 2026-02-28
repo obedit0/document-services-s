@@ -1,5 +1,6 @@
 using Domain.Entities.SignatureContracts;
 using Domain.Interfaces;
+using MongoDB.Bson;
 using MongoDB.Driver;
 using MongodbInfrastructure.Collections;
 
@@ -11,7 +12,7 @@ public class MongoSignatureQuery : ISignatureQuery
 
     public MongoSignatureQuery(IMongoDatabase database)
     {
-        _collection = database.GetCollection<SignatureDocument>("signatures");
+        _collection = database.GetCollection<SignatureDocument>("Signatures");
     }
 
     public async Task<SignatureEntity?> GetByKeywordAndChannelAsync(int keyword, int channel, CancellationToken ct = default)
@@ -33,5 +34,19 @@ public class MongoSignatureQuery : ISignatureQuery
         );
         var count = await _collection.CountDocumentsAsync(filter, cancellationToken: ct);
         return (int)count;
+    }
+
+    public async Task<bool> HealthcheckAsync(CancellationToken ct = default)
+    {
+        try
+        {
+            var command = new BsonDocument("ping", 1);
+            var result = await _collection.Database.RunCommandAsync<BsonDocument>(command, cancellationToken: ct);
+            return result != null && result.Contains("ok") && result["ok"] == 1;
+        }
+        catch
+        {
+            return false;
+        }
     }
 }

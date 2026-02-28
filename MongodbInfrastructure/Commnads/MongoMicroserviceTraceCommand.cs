@@ -25,7 +25,7 @@ public sealed class MongoMicroserviceTraceCommand : IMicroserviceTraceRepository
         ISqsMessagePublisher sqsPublisher,
         ILogger<MongoMicroserviceTraceCommand> logger)
     {
-        _errorCollection = database.GetCollection<MicroserviceErrorTraceDocument>("microservice_error_trace");
+        _errorCollection = database.GetCollection<MicroserviceErrorTraceDocument>("MicroserviceErrorTrace");
         _sqsPublisher = sqsPublisher;
         _logger = logger;
         EnsureIndexes();

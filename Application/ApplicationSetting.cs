@@ -1,16 +1,14 @@
 using Application.Ports;
 using Application.Usecases.ErrorTrace;
-using Application.Usecases.ExampleUsecase;
+using Application.Usecases.Healthcheck;
 using Application.Usecases.Signature.SignatureDocumentStatusQuery;
 using Application.Usecases.Signature.SignatureStatusQuery;
 using Application.Usecases.Signature.SignatureContractCreation;
-using Application.Usecases.SqsUsecase;
 using Application.Usecases.Signature.SignatureContractCancellation;
 using Application.Usecases.Signature.ProviderDocumentsUpdate;
 using Application.Usecases.Signature.SignedDocumentsUpdate;
 using Domain.Containers.MemoryEvent;
 using AwsSqsInfrastructure;
-using FakeApiInfrastructure;
 using InternalHttpClientInfrastructure;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -41,13 +39,11 @@ public static class ApplicationSetting
         services.AddSingleton<MicroserviceErrorMemoryQueue>(provider => new MicroserviceErrorMemoryQueue());
 
         // Added Infrstrutures
-        services.AddFakeApiInfrastructure();
         services.AddKeynuaInfrastructure(configuration, isDevelopment);
         services.AddMongodbInfrastructure(configuration, isDevelopment);
         services.AddAwsSqsInfrastructure(configuration, isDevelopment);
 
         //Dependency inyection        
-        services.AddTransient<IExamplePort, ExampleCase>();
         services.AddTransient<ISignatureContractPort, DocumentSignatureUsecase>();
         services.AddTransient<ICancelSignatureContractPort, DocumentSignatureCancellation>();
         services.AddTransient<IUpdateSignedDocumentsPort, SignedDocumentsUpdateCase>();
@@ -55,6 +51,6 @@ public static class ApplicationSetting
         services.AddTransient<IMicroserviceTracePort, MicroserviceTracePersistenceCase>();
         services.AddTransient<IGetSignatureStatusPort, DocumentSignatureInquiryUsecase>();
         services.AddTransient<IGetSignatureDocumentStatusPort, SignatureDocumentStatusQueryCase>();
-        services.AddTransient<ISqsTestPort, SqsTestCase>();
+        services.AddTransient<IHealthcheckPort, HealthcheckUsecase>();
     }
 }

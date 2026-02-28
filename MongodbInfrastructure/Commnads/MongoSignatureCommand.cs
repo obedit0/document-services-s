@@ -12,7 +12,7 @@ public class MongoSignatureCommand : ISignatureCommand
 
     public MongoSignatureCommand(IMongoDatabase database)
     {
-        _collection = database.GetCollection<SignatureDocument>("signatures");
+        _collection = database.GetCollection<SignatureDocument>("Signatures");
         EnsureIndexes();
     }
 

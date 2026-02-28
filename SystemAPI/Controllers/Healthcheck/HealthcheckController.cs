@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Authorization;
+using Application.Ports;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using System.Diagnostics;
@@ -10,10 +11,12 @@ namespace SystemAPI.Controllers.Healthcheck;
 public class HealthcheckController : ControllerBase
 {
     private readonly HealthCheckService _healthCheckService;
+    private readonly IHealthcheckPort _healthcheckPort;
 
-    public HealthcheckController(HealthCheckService healthCheckService)
+    public HealthcheckController(HealthCheckService healthCheckService, IHealthcheckPort healthcheckPort)
     {
         _healthCheckService = healthCheckService;
+        _healthcheckPort = healthcheckPort;
     }
 
     //[Authorize(Policy = "ReadScope")] // validate by JWT claim
@@ -70,7 +73,7 @@ public class HealthcheckController : ControllerBase
         return Ok(new { message = "pong", timestamp = DateTime.UtcNow.AddHours(-5) });
     }
 
-    //[Authorize] // Solo requiere autenticación, no scope específico
+    //[Authorize] // Solo requiere autenticacion, no scope especifico
     [HttpGet("debug-claims")]
     public IActionResult DebugClaims()
     {
@@ -121,8 +124,9 @@ public class HealthcheckController : ControllerBase
     }
 
     [HttpGet("healthcheck")]
-    public IActionResult HealthCheck()
+    public async Task<IActionResult> HealthDependencies(CancellationToken ct = default)
     {
-        return Health();
+        var result = await _healthcheckPort.ExecuteAsync(ct);
+        return Ok(result.SuccessValue);
     }
 }

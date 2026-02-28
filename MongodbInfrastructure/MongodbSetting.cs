@@ -77,7 +77,7 @@ public static class MongodbSetting
             Server: GetCfg("MONGO_DB_SERVER"),
             DatabaseName: GetCfg("MONGO_DB_NAME"),
             User: CryptoCommon.decryptString(GetCfg("MONGO_DB_USER")),
-            Password: CryptoCommon.decryptString(GetCfg("MONGO_DB_PASSWD")));
+            Password: CryptoCommon.decryptString(GetCfg("MONGO_DB_PASSWORD")));
     }
 
     private static MongoConnectionConfig ReadFromEnvironment()
@@ -91,7 +91,7 @@ public static class MongodbSetting
             Server: GetEnv("MONGO_DB_SERVER"),
             DatabaseName: GetEnv("MONGO_DB_NAME"),
             User: CryptoCommon.decryptString(GetEnv("MONGO_DB_USER")),
-            Password: CryptoCommon.decryptString(GetEnv("MONGO_DB_PASSWD")));
+            Password: CryptoCommon.decryptString(GetEnv("MONGO_DB_PASSWORD")));
     }
 
     private sealed record MongoConnectionConfig(

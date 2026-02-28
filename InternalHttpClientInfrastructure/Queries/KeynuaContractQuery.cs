@@ -56,4 +56,24 @@ public sealed class KeynuaContractQuery : ISignatureContractQuery
         var normalizedStatus = response.Content.Status?.Trim().ToLowerInvariant() ?? string.Empty;
         return KeynuaStatusMapper.MapSignatureStatus(normalizedStatus);
     }
+
+    public async Task<bool> HealthcheckAsync(CancellationToken ct = default)
+    {
+        try
+        {
+            var httpClient = new HttpClientBuilder(_httpClientFactory, _logger);
+            var response = await httpClient
+                .WithBaseUrl(_options.BaseUrl!)
+                .WithHeader("x-api-key", _options.ApiKey!)
+                .WithHeader("authorization", _options.Authorization!)
+                .GetAsync<object>(ct);
+
+            return response.StatusCode > 0 && response.StatusCode < 500;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Keynua healthcheck failed");
+            return false;
+        }
+    }
 }

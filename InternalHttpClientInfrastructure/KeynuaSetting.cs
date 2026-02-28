@@ -82,8 +82,8 @@ public static class KeynuaSetting
             ?? throw new InvalidOperationException($"La variable de entorno '{name}' no esta definida.");
 
         options.BaseUrl = GetEnv("KEYNUA_BASE_URL");
-        options.ApiKey = GetEnv("KEYNUA_API_KEY");
-        options.Authorization = GetEnv("KEYNUA_AUTHORIZATION");
+        options.ApiKey = GetEnv("KEYNUA_AUTH_API_KEY");
+        options.Authorization = GetEnv("KEYNUA_AUTH_AUTHORIZATION");
         options.Banking = GetEnv("KEYNUA_BANKING");
         options.Product = GetEnv("KEYNUA_PRODUCT");
 
